@@ -8,6 +8,48 @@ import (
 	"os"
 )
 
+// Package-level constants with SELECT * (should trigger warnings)
+const (
+	// Should trigger warning - SELECT * in const
+	BadQuery1 = "SELECT * FROM users" // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
+
+	// Should trigger warning - SELECT * with WHERE
+	BadQuery2 = "SELECT * FROM orders WHERE status = 'active'" // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
+
+	// Good query - explicit columns
+	GoodQuery1 = "SELECT id, name, email FROM users"
+
+	// Good query - COUNT(*)
+	GoodQuery2 = "SELECT COUNT(*) FROM users"
+
+	// Good query - system tables
+	GoodQuery3 = "SELECT * FROM information_schema.tables"
+)
+
+// Single package-level const declaration
+const SingleBadQuery = "SELECT * FROM products" // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
+
+const SingleGoodQuery = "SELECT id, name FROM products"
+
+// Multiline query constant
+const MultilineQuery = `SELECT * FROM inventory WHERE quantity > 0` // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
+
+// Package-level variables (should also be checked)
+var (
+	VarBadQuery  = "SELECT * FROM categories" // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
+	VarGoodQuery = "SELECT id, name FROM categories"
+	VarCount     = "SELECT COUNT(*) FROM categories"
+)
+
+// Non-SQL constants (should not trigger warnings)
+const (
+	NotSQL      = "This is not * a SQL query"
+	AlsoNotSQL  = "Use asterisk * in documentation"
+	JustText    = "Some random * text"
+	NumberValue = 42
+	BoolValue   = true
+)
+
 // Basic SELECT * detection in string literals
 func basicSelectStar() {
 	query := "SELECT * FROM users"           // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
@@ -61,7 +103,7 @@ func defaultBehavior() {
 	_, _ = os.Open("file.sql")
 }
 
-// Test data for removed nolint functionality  
+// Test data for removed nolint functionality
 func removedNolintDirectives() {
 	// This now triggers - nolint support removed
 	query := "SELECT * FROM temp_table" // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"

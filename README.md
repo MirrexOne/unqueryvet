@@ -9,6 +9,7 @@ unqueryvet is a Go static analysis tool (linter) that detects `SELECT *` usage i
 ## Features
 
 - **Detects `SELECT *` in string literals** - Finds problematic queries in your Go code
+- **Constants and variables support** - Detects `SELECT *` in const and var declarations
 - **SQL Builder support** - Works with popular SQL builders like Squirrel, GORM, etc.
 - **Highly configurable** - Extensive configuration options for different use cases
 - **Supports `//nolint:unqueryvet`** - Standard Go linting suppression
@@ -78,6 +79,12 @@ linters:
 ### Problematic code (will trigger warnings)
 
 ```go
+// Constants with SELECT *
+const QueryUsers = "SELECT * FROM users"
+
+// Variables with SELECT *
+var QueryOrders = "SELECT * FROM orders"
+
 // String literals with SELECT *
 query := "SELECT * FROM users"
 rows, err := db.Query("SELECT * FROM orders WHERE status = ?", "active")
@@ -90,7 +97,13 @@ query := builder.Select().Columns("*").From("inventory")
 ### Good code (recommended)
 
 ```go
-// Explicit column selection
+// Constants with explicit columns
+const QueryUsers = "SELECT id, name, email FROM users"
+
+// Variables with explicit columns
+var QueryOrders = "SELECT id, status, total FROM orders"
+
+// String literals with explicit column selection
 query := "SELECT id, name, email FROM users"
 rows, err := db.Query("SELECT id, total FROM orders WHERE status = ?", "active")
 

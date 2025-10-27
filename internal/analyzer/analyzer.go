@@ -64,6 +64,7 @@ func RunWithConfig(pass *analysis.Pass, cfg *config.UnqueryvetSettings) (any, er
 		(*ast.CallExpr)(nil),   // Function/method calls
 		(*ast.File)(nil),       // Files (for SQL builder analysis)
 		(*ast.AssignStmt)(nil), // Assignment statements for standalone literals
+		(*ast.GenDecl)(nil),    // General declarations (const, var, type)
 	}
 
 	// Walk through all AST nodes and analyze them
@@ -77,6 +78,9 @@ func RunWithConfig(pass *analysis.Pass, cfg *config.UnqueryvetSettings) (any, er
 		case *ast.AssignStmt:
 			// Check assignment statements for standalone SQL literals
 			checkAssignStmt(pass, node, cfg)
+		case *ast.GenDecl:
+			// Check constant and variable declarations
+			checkGenDecl(pass, node, cfg)
 		case *ast.CallExpr:
 			// Analyze function calls for SQL with SELECT * usage
 			checkCallExpr(pass, node, cfg)
@@ -95,6 +99,7 @@ func run(pass *analysis.Pass) (any, error) {
 		(*ast.CallExpr)(nil),   // Function/method calls
 		(*ast.File)(nil),       // Files (for SQL builder analysis)
 		(*ast.AssignStmt)(nil), // Assignment statements for standalone literals
+		(*ast.GenDecl)(nil),    // General declarations (const, var)
 	}
 
 	// Always use default settings since passing settings through ResultOf doesn't work reliably
@@ -112,6 +117,9 @@ func run(pass *analysis.Pass) (any, error) {
 		case *ast.AssignStmt:
 			// Check assignment statements for standalone SQL literals
 			checkAssignStmt(pass, node, cfg)
+		case *ast.GenDecl:
+			// Check constant and variable declarations
+			checkGenDecl(pass, node, cfg)
 		case *ast.CallExpr:
 			// Analyze function calls for SQL with SELECT * usage
 			checkCallExpr(pass, node, cfg)
@@ -133,6 +141,37 @@ func checkAssignStmt(pass *analysis.Pass, stmt *ast.AssignStmt, cfg *config.Unqu
 					Pos:     lit.Pos(),
 					Message: getWarningMessage(),
 				})
+			}
+		}
+	}
+}
+
+// checkGenDecl checks general declarations (const, var) for SELECT * in SQL queries
+func checkGenDecl(pass *analysis.Pass, decl *ast.GenDecl, cfg *config.UnqueryvetSettings) {
+	// Only check const and var declarations
+	if decl.Tok != token.CONST && decl.Tok != token.VAR {
+		return
+	}
+
+	// Iterate through all specifications in the declaration
+	for _, spec := range decl.Specs {
+		// Type assert to ValueSpec (const/var specifications)
+		valueSpec, ok := spec.(*ast.ValueSpec)
+		if !ok {
+			continue
+		}
+
+		// Check all values in the specification
+		for _, value := range valueSpec.Values {
+			// Only check direct string literals
+			if lit, ok := value.(*ast.BasicLit); ok && lit.Kind == token.STRING {
+				content := normalizeSQLQuery(lit.Value)
+				if isSelectStarQuery(content, cfg) {
+					pass.Report(analysis.Diagnostic{
+						Pos:     lit.Pos(),
+						Message: getWarningMessage(),
+					})
+				}
 			}
 		}
 	}
