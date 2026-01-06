@@ -215,3 +215,170 @@ func TestAllowedPatternsWithRegex(t *testing.T) {
 		})
 	}
 }
+
+func TestAliasedWildcard(t *testing.T) {
+	defaults := config.DefaultSettings()
+	cfg := &defaults
+
+	tests := []struct {
+		name     string
+		query    string
+		expected bool
+	}{
+		{
+			name:     "SELECT t.* with alias",
+			query:    "SELECT t.* FROM users t",
+			expected: true,
+		},
+		{
+			name:     "SELECT multiple aliases",
+			query:    "SELECT u.*, o.* FROM users u JOIN orders o",
+			expected: true,
+		},
+		{
+			name:     "SELECT table.* without alias",
+			query:    "SELECT users.* FROM users",
+			expected: true,
+		},
+		{
+			name:     "SELECT explicit columns with alias",
+			query:    "SELECT t.id, t.name FROM users t",
+			expected: false,
+		},
+		{
+			name:     "SELECT explicit columns no alias",
+			query:    "SELECT id, name FROM users",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isSelectStarQuery(tt.query, cfg)
+			if result != tt.expected {
+				t.Errorf("isSelectStarQuery(%q) = %v, want %v", tt.query, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSubqueryDetection(t *testing.T) {
+	defaults := config.DefaultSettings()
+	cfg := &defaults
+
+	tests := []struct {
+		name     string
+		query    string
+		expected bool
+	}{
+		{
+			name:     "SELECT * in subquery",
+			query:    "SELECT id FROM (SELECT * FROM users)",
+			expected: true,
+		},
+		{
+			name:     "SELECT * in IN clause",
+			query:    "SELECT id FROM users WHERE id IN (SELECT * FROM orders)",
+			expected: true,
+		},
+		{
+			name:     "SELECT * in EXISTS",
+			query:    "SELECT id FROM users WHERE EXISTS (SELECT * FROM orders)",
+			expected: true,
+		},
+		{
+			name:     "explicit columns in subquery",
+			query:    "SELECT id FROM (SELECT id, name FROM users)",
+			expected: false,
+		},
+		{
+			name:     "explicit columns in IN",
+			query:    "SELECT id FROM users WHERE id IN (SELECT user_id FROM orders)",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isSelectStarQuery(tt.query, cfg)
+			if result != tt.expected {
+				t.Errorf("isSelectStarQuery(%q) = %v, want %v", tt.query, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestNewConfigurationOptions(t *testing.T) {
+	defaults := config.DefaultSettings()
+
+	// Test new detection flags are enabled by default
+	if !defaults.CheckAliasedWildcard {
+		t.Error("CheckAliasedWildcard should be enabled by default")
+	}
+	if !defaults.CheckStringConcat {
+		t.Error("CheckStringConcat should be enabled by default")
+	}
+	if !defaults.CheckFormatStrings {
+		t.Error("CheckFormatStrings should be enabled by default")
+	}
+	if !defaults.CheckStringBuilder {
+		t.Error("CheckStringBuilder should be enabled by default")
+	}
+	if !defaults.CheckSubqueries {
+		t.Error("CheckSubqueries should be enabled by default")
+	}
+
+	// Test severity default
+	if defaults.Severity != "warning" {
+		t.Errorf("Severity should be 'warning' by default, got %q", defaults.Severity)
+	}
+
+	// Test SQL builders config
+	if !defaults.SQLBuilders.Squirrel {
+		t.Error("SQLBuilders.Squirrel should be enabled by default")
+	}
+	if !defaults.SQLBuilders.GORM {
+		t.Error("SQLBuilders.GORM should be enabled by default")
+	}
+	if !defaults.SQLBuilders.SQLx {
+		t.Error("SQLBuilders.SQLx should be enabled by default")
+	}
+	if !defaults.SQLBuilders.Bun {
+		t.Error("SQLBuilders.Bun should be enabled by default")
+	}
+	if !defaults.SQLBuilders.SQLBoiler {
+		t.Error("SQLBuilders.SQLBoiler should be enabled by default")
+	}
+	if !defaults.SQLBuilders.Jet {
+		t.Error("SQLBuilders.Jet should be enabled by default")
+	}
+}
+
+func TestFilterContext(t *testing.T) {
+	cfg := &config.UnqueryvetSettings{
+		IgnoredFunctions: []string{"debug.*", "test.Query"},
+		IgnoredFiles:     []string{"*_test.go", "testdata/**"},
+		AllowedPatterns:  []string{`(?i)COUNT\(\s*\*\s*\)`},
+	}
+
+	filter, err := NewFilterContext(cfg)
+	if err != nil {
+		t.Fatalf("Failed to create FilterContext: %v", err)
+	}
+
+	// Test file filtering
+	if !filter.IsIgnoredFile("foo_test.go") {
+		t.Error("foo_test.go should be ignored")
+	}
+	if filter.IsIgnoredFile("foo.go") {
+		t.Error("foo.go should not be ignored")
+	}
+
+	// Test allowed patterns
+	if !filter.IsAllowedPattern("SELECT COUNT(*) FROM users") {
+		t.Error("COUNT(*) should be allowed")
+	}
+	if filter.IsAllowedPattern("SELECT * FROM users") {
+		t.Error("SELECT * FROM users should not be allowed")
+	}
+}
