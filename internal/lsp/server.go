@@ -52,7 +52,7 @@ type Document struct {
 }
 
 // NewServer creates a new LSP server.
-func NewServer(in io.Reader, out io.Writer, logger io.Writer) *Server {
+func NewServer(in io.Reader, out, logger io.Writer) *Server {
 	return &Server{
 		reader:    json.NewDecoder(in),
 		writer:    json.NewEncoder(out),

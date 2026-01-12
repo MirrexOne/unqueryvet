@@ -67,7 +67,7 @@ var (
 )
 
 // RenderDiffPreview renders a diff preview showing before/after changes.
-func RenderDiffPreview(original, modified string, lineNum int, contextLines int) string {
+func RenderDiffPreview(original, modified string, lineNum, contextLines int) string {
 	var b strings.Builder
 
 	b.WriteString(previewTitleStyle.Render("📋 Preview Changes"))

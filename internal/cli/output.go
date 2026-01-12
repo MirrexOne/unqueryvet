@@ -195,7 +195,7 @@ func (o *Output) PrintStatistics(stats *Statistics) {
 }
 
 // PrintDiagnostic prints a single diagnostic with context.
-func (o *Output) PrintDiagnostic(file string, line int, col int, severity string, message string) {
+func (o *Output) PrintDiagnostic(file string, line, col int, severity, message string) {
 	if o.quiet && severity == "warning" {
 		return
 	}

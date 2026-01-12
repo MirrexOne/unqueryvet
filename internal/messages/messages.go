@@ -171,7 +171,7 @@ func getMessage(msgType MessageType) DiagnosticMessage {
 }
 
 // FormatDiagnostic formats a diagnostic message with file location.
-func FormatDiagnostic(file string, line int, col int, msgType MessageType, verbose bool) string {
+func FormatDiagnostic(file string, line, col int, msgType MessageType, verbose bool) string {
 	location := fmt.Sprintf("%s:%d:%d", file, line, col)
 	message := GetEnhancedMessage(msgType, verbose)
 
