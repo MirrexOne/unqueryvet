@@ -53,16 +53,15 @@ func (c *PGXChecker) CheckSelectStar(call *ast.CallExpr) *SelectStarViolation {
 	methodName := sel.Sel.Name
 
 	// pgx methods where the SQL query is typically the second argument (after context)
-	var queryArgIndex int
+	// conn.Query(ctx, sql, args...), conn.QueryFunc(ctx, sql, args, func...)
 	switch methodName {
 	case "Query", "QueryRow", "Exec", "Prepare", "QueryFunc":
-		// conn.Query(ctx, sql, args...)
-		// conn.QueryFunc(ctx, sql, args, func...)
-		queryArgIndex = 1
+		// supported methods
 	default:
 		return nil
 	}
 
+	const queryArgIndex = 1
 	if queryArgIndex >= len(call.Args) {
 		return nil
 	}
