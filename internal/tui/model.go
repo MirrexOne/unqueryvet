@@ -493,7 +493,7 @@ func applyFix(issue Issue) error {
 
 	// Write back
 	output := strings.Join(lines, "\n")
-	if err := os.WriteFile(issue.File, []byte(output), 0644); err != nil {
+	if err := os.WriteFile(issue.File, []byte(output), 0o644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 

@@ -35,7 +35,7 @@ ignored-functions:
 ignored-files:
   - "*_test.go"
 `
-		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -78,7 +78,7 @@ ignored-files:
 		content := `
 check-sql-builders: [invalid yaml content
 `
-		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -91,7 +91,7 @@ check-sql-builders: [invalid yaml content
 	// Test empty config
 	t.Run("empty config", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "empty.yaml")
-		if err := os.WriteFile(configPath, []byte(""), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte(""), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -115,7 +115,7 @@ sql-builders:
   gorm: false
   sqlx: true
 `
-		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -140,7 +140,7 @@ func TestFindConfig(t *testing.T) {
 	// Create temp directory structure
 	tmpDir := t.TempDir()
 	subDir := filepath.Join(tmpDir, "sub", "dir")
-	if err := os.MkdirAll(subDir, 0755); err != nil {
+	if err := os.MkdirAll(subDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -149,7 +149,7 @@ func TestFindConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer os.Chdir(origDir)
+	defer func() { _ = os.Chdir(origDir) }()
 
 	t.Run("no config", func(t *testing.T) {
 		if err := os.Chdir(subDir); err != nil {
@@ -166,7 +166,7 @@ func TestFindConfig(t *testing.T) {
 
 	t.Run("config in current dir", func(t *testing.T) {
 		configPath := filepath.Join(subDir, ConfigFileName)
-		if err := os.WriteFile(configPath, []byte("severity: warning"), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte("severity: warning"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		defer os.Remove(configPath)
@@ -186,7 +186,7 @@ func TestFindConfig(t *testing.T) {
 
 	t.Run("config in parent dir", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, ConfigFileName)
-		if err := os.WriteFile(configPath, []byte("severity: error"), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte("severity: error"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		defer os.Remove(configPath)
@@ -206,7 +206,7 @@ func TestFindConfig(t *testing.T) {
 
 	t.Run("alternate config name", func(t *testing.T) {
 		configPath := filepath.Join(subDir, AlternateConfigFileName)
-		if err := os.WriteFile(configPath, []byte("severity: warning"), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte("severity: warning"), 0o644); err != nil {
 			t.Fatal(err)
 		}
 		defer os.Remove(configPath)
@@ -231,7 +231,7 @@ func TestLoadOrDefault(t *testing.T) {
 	t.Run("explicit path", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "config.yaml")
 		content := `severity: error`
-		if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
 
@@ -257,10 +257,10 @@ func TestLoadOrDefault(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		defer os.Chdir(origDir)
+		defer func() { _ = os.Chdir(origDir) }()
 
 		emptyDir := filepath.Join(tmpDir, "empty")
-		if err := os.MkdirAll(emptyDir, 0755); err != nil {
+		if err := os.MkdirAll(emptyDir, 0o755); err != nil {
 			t.Fatal(err)
 		}
 		if err := os.Chdir(emptyDir); err != nil {
@@ -370,7 +370,7 @@ sql-builders:
   sqlboiler: true
   jet: true
 `
-	if err := os.WriteFile(configPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

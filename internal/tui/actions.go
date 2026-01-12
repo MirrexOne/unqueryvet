@@ -119,7 +119,7 @@ func ExportToJSON(filename string, result ExportResult) error {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
 	}
 
-	if err := os.WriteFile(filename, data, 0644); err != nil {
+	if err := os.WriteFile(filename, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
 
@@ -231,7 +231,7 @@ func restoreOriginal(filename string, lineNum int, original string) error {
 	lines[lineNum-1] = original
 	output := strings.Join(lines, "\n")
 
-	return os.WriteFile(filename, []byte(output), 0644)
+	return os.WriteFile(filename, []byte(output), 0o644)
 }
 
 // GetIssueType determines the type of issue for smart fix suggestions.

@@ -3,7 +3,6 @@ package dsl
 
 import (
 	"fmt"
-	"regexp"
 )
 
 // Severity represents the severity level of a rule violation.
@@ -52,12 +51,6 @@ type Rule struct {
 
 	// Fix is an optional suggested fix message.
 	Fix string `yaml:"fix,omitempty"`
-
-	// compiledPatterns holds compiled regex patterns.
-	compiledPatterns []*regexp.Regexp
-
-	// compiledCondition holds the compiled expr program.
-	compiledCondition interface{}
 }
 
 // Config represents the complete DSL configuration.
