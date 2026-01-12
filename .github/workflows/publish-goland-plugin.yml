@@ -1,0 +1,102 @@
+name: Publish GoLand Plugin
+
+on:
+  push:
+    tags:
+      - 'goland-v*'  # Trigger on tags like goland-v1.0.1
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Plugin version (e.g., 1.0.1)'
+        required: true
+      channel:
+        description: 'Release channel'
+        required: false
+        default: 'default'
+        type: choice
+        options:
+          - default
+          - eap
+
+env:
+  PLUGIN_DIR: extensions/goland
+
+jobs:
+  publish:
+    name: Publish to JetBrains Marketplace
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate version format
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/goland-v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/goland-v}"
+          else
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+)?$ ]]; then
+            echo "::error::Invalid version format: $VERSION (expected: X.Y.Z or X.Y.Z-suffix)"
+            exit 1
+          fi
+          echo "PLUGIN_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Update plugin version
+        working-directory: ${{ env.PLUGIN_DIR }}
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ env.PLUGIN_VERSION }}\"/" build.gradle.kts
+          echo "Updated version to ${{ env.PLUGIN_VERSION }}"
+          grep "^version" build.gradle.kts
+
+      - name: Build Plugin
+        working-directory: ${{ env.PLUGIN_DIR }}
+        run: ./gradlew buildPlugin
+
+      - name: Verify Plugin
+        working-directory: ${{ env.PLUGIN_DIR }}
+        run: ./gradlew verifyPlugin
+
+      - name: Publish Plugin
+        working-directory: ${{ env.PLUGIN_DIR }}
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+        run: |
+          CHANNEL="${{ github.event.inputs.channel || 'default' }}"
+          echo "Publishing to channel: $CHANNEL"
+          ./gradlew publishPlugin -PpluginChannel="$CHANNEL"
+
+      - name: Upload Plugin Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unqueryvet-goland-${{ env.PLUGIN_VERSION }}
+          path: ${{ env.PLUGIN_DIR }}/build/distributions/*.zip
+          if-no-files-found: error
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/goland-v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.PLUGIN_DIR }}/build/distributions/*.zip
+          name: GoLand Plugin v${{ env.PLUGIN_VERSION }}
+          generate_release_notes: true
+          body: |
+            ## unqueryvet GoLand Plugin v${{ env.PLUGIN_VERSION }}
+            
+            ### Installation
+            - **Marketplace**: Settings → Plugins → Marketplace → Search "unqueryvet"
+            - **Manual**: Download zip below → Settings → Plugins → ⚙️ → Install from Disk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

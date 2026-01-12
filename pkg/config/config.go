@@ -1,6 +1,38 @@
 // Package config provides configuration structures for Unqueryvet analyzer.
 package config
 
+// CustomRule represents a user-defined DSL rule for SQL analysis.
+type CustomRule struct {
+	// ID is a unique identifier for the rule.
+	ID string `mapstructure:"id" json:"id" yaml:"id"`
+
+	// Pattern is the SQL or code pattern to match.
+	// Supports metavariables like $TABLE, $VAR, etc.
+	Pattern string `mapstructure:"pattern" json:"pattern" yaml:"pattern"`
+
+	// Patterns allows multiple patterns for a single rule.
+	Patterns []string `mapstructure:"patterns" json:"patterns" yaml:"patterns,omitempty"`
+
+	// When is an optional condition expression (evaluated with expr-lang).
+	// Available variables: file, package, function, query, table, in_loop, etc.
+	When string `mapstructure:"when" json:"when" yaml:"when,omitempty"`
+
+	// Message is the diagnostic message shown when the rule triggers.
+	Message string `mapstructure:"message" json:"message" yaml:"message,omitempty"`
+
+	// Severity is the severity level (error, warning, info, ignore).
+	Severity string `mapstructure:"severity" json:"severity" yaml:"severity,omitempty"`
+
+	// Action determines what to do when the pattern matches (report, allow, ignore).
+	Action string `mapstructure:"action" json:"action" yaml:"action,omitempty"`
+
+	// Fix is an optional suggested fix message.
+	Fix string `mapstructure:"fix" json:"fix" yaml:"fix,omitempty"`
+}
+
+// RuleSeverity maps built-in rule IDs to their severity levels.
+type RuleSeverity map[string]string
+
 // UnqueryvetSettings holds the configuration for the Unqueryvet analyzer.
 type UnqueryvetSettings struct {
 	// CheckSQLBuilders enables checking SQL builders like Squirrel for SELECT * usage
@@ -38,6 +70,20 @@ type UnqueryvetSettings struct {
 
 	// SQLBuilders defines which SQL builder libraries to check
 	SQLBuilders SQLBuildersConfig `mapstructure:"sql-builders" json:"sql-builders" yaml:"sql-builders"`
+
+	// Rules is a map of built-in rule IDs to their severity (error, warning, info, ignore).
+	// Example: {"select-star": "error", "n1-queries": "warning"}
+	Rules RuleSeverity `mapstructure:"rules" json:"rules" yaml:"rules,omitempty"`
+
+	// CustomRules is a list of user-defined DSL rules.
+	CustomRules []CustomRule `mapstructure:"custom-rules" json:"custom-rules" yaml:"custom-rules,omitempty"`
+
+	// Allow is a list of SQL patterns to allow (whitelist).
+	// These patterns will not trigger any warnings.
+	Allow []string `mapstructure:"allow" json:"allow" yaml:"allow,omitempty"`
+
+	// Ignore is a list of file patterns to ignore (in addition to IgnoredFiles).
+	Ignore []string `mapstructure:"ignore" json:"ignore" yaml:"ignore,omitempty"`
 }
 
 // SQLBuildersConfig defines which SQL builder libraries to analyze.

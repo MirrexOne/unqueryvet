@@ -41,3 +41,7 @@ Thumbs.db
 *.log
 go.work
 .golangci.local.yml
+
+# Build tools (downloaded by Taskfile/Gradle)
+.tools/
+.task/

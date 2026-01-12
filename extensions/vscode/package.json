@@ -1,0 +1,125 @@
+{
+  "name": "unqueryvet",
+  "displayName": "Unqueryvet - SQL Inconsistencies Detector",
+  "description": "Detect and fix inconsistencies in SQL queries for Go projects",
+  "version": "1.0.0",
+  "publisher": "unqueryvet",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "go",
+    "golang",
+    "sql",
+    "linter",
+    "select *",
+    "database"
+  ],
+  "activationEvents": [
+    "onLanguage:go"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "unqueryvet.analyzeFile",
+        "title": "Unqueryvet: Analyze Current File"
+      },
+      {
+        "command": "unqueryvet.analyzeWorkspace",
+        "title": "Unqueryvet: Analyze Workspace"
+      },
+      {
+        "command": "unqueryvet.fixAll",
+        "title": "Unqueryvet: Fix All Issues"
+      },
+      {
+        "command": "unqueryvet.showOutput",
+        "title": "Unqueryvet: Show Output"
+      },
+      {
+        "command": "unqueryvet.restart",
+        "title": "Unqueryvet: Restart Language Server"
+      }
+    ],
+    "configuration": {
+      "title": "Unqueryvet",
+      "properties": {
+        "unqueryvet.enable": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/disable unqueryvet"
+        },
+        "unqueryvet.lspPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to unqueryvet-lsp binary (leave empty to use PATH)"
+        },
+        "unqueryvet.analyzeOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "Analyze file on save"
+        },
+        "unqueryvet.analyzeOnType": {
+          "type": "boolean",
+          "default": false,
+          "description": "Analyze while typing (may impact performance)"
+        },
+        "unqueryvet.showInlineHints": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline hints for SELECT * issues"
+        },
+        "unqueryvet.severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "information",
+            "hint"
+          ],
+          "default": "warning",
+          "description": "Severity level for diagnostics"
+        },
+        "unqueryvet.checkN1Queries": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable N+1 query detection"
+        },
+        "unqueryvet.checkSQLInjection": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable SQL injection vulnerability detection"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MirrexOne/unqueryvet"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,80 @@
+name: Sync Plugin Version on Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish-plugin:
+    name: Publish GoLand Plugin
+    runs-on: ubuntu-latest
+    # Only run if the main project version was released
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from main release tag
+        run: |
+          # Extract version from main tag (v1.0.1 -> 1.0.1)
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "PLUGIN_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Publishing GoLand plugin version $VERSION"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Update plugin version
+        working-directory: extensions/goland
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ env.PLUGIN_VERSION }}\"/" build.gradle.kts
+          echo "Updated GoLand plugin version to ${{ env.PLUGIN_VERSION }}"
+          grep "^version" build.gradle.kts
+
+      - name: Build Plugin
+        working-directory: extensions/goland
+        run: ./gradlew buildPlugin
+
+      - name: Verify Plugin
+        working-directory: extensions/goland
+        run: ./gradlew verifyPlugin
+
+      - name: Publish Plugin to JetBrains Marketplace
+        working-directory: extensions/goland
+        env:
+          PUBLISH_TOKEN: ${{ secrets.JETBRAINS_PUBLISH_TOKEN }}
+        run: ./gradlew publishPlugin
+        continue-on-error: true
+
+      - name: Upload Plugin Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unqueryvet-goland-${{ env.PLUGIN_VERSION }}
+          path: extensions/goland/build/distributions/*.zip
+          if-no-files-found: error
+
+      - name: Create Plugin Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: extensions/goland/build/distributions/*.zip
+          tag_name: goland-v${{ env.PLUGIN_VERSION }}
+          name: GoLand Plugin v${{ env.PLUGIN_VERSION }}
+          body: |
+            ## unqueryvet GoLand Plugin v${{ env.PLUGIN_VERSION }}
+            
+            Synced with main project v${{ env.PLUGIN_VERSION }}
+            
+            ### Installation
+            - **Marketplace**: Settings → Plugins → Marketplace → Search "unqueryvet"
+            - **Manual**: Download zip below → Settings → Plugins → ⚙️ → Install from Disk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
