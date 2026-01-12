@@ -368,7 +368,7 @@ func (s *Server) publishDiagnostics(uri string, diagnostics []protocol.Diagnosti
 }
 
 // sendResult sends a successful response.
-func (s *Server) sendResult(id interface{}, result interface{}) error {
+func (s *Server) sendResult(id, result interface{}) error {
 	resp := protocol.Response{
 		JSONRPC: "2.0",
 		ID:      id,

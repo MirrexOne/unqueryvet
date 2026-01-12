@@ -171,7 +171,7 @@ func RenderIssueTypeStats(typeCounts map[string]int) string {
 }
 
 // RenderSmartFixSuggestion renders smart fix based on issue type.
-func RenderSmartFixSuggestion(issueType string, suggestion string) string {
+func RenderSmartFixSuggestion(issueType, suggestion string) string {
 	var b strings.Builder
 
 	b.WriteString(issueHeaderStyle.Render("🧠 Smart Fix"))
