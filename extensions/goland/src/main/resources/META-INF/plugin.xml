@@ -2,28 +2,36 @@
     <id>dev.unqueryvet</id>
     <name>Unqueryvet - SQL Query Linter</name>
     <version>1.0.0</version>
-    <vendor email="mirrexone@gmail.com" url="https://github.com/MirrexOne/unqueryvet">unqueryvet</vendor>
+    <vendor
+        email="mirrexone@gmail.com"
+        url="https://github.com/MirrexOne/unqueryvet"
+    >unqueryvet</vendor>
 
-    <description><![CDATA[
-        <p>Detects SELECT * usage in SQL queries within Go code.</p>
+    <description
+    ><![CDATA[
+        <p>Go SQL Linter for detecting inconsistency queries in Go code.</p>
         <ul>
-            <li>Real-time SELECT * detection in SQL strings</li>
-            <li>N+1 query detection</li>
+            <li>Real-time SELECT * detection (including aliased wildcards and subqueries)</li>
+            <li>Detection in string concatenation and format strings (fmt.Sprintf)</li>
+            <li>N+1 query detection in loops</li>
             <li>SQL injection vulnerability scanning</li>
-            <li>Query complexity analysis</li>
             <li>Quick fixes for replacing SELECT * with specific columns</li>
-            <li>Support for popular SQL builders (sqlx, gorm, sqlc, goqu, etc.)</li>
+            <li>Support for 12 SQL builders: Squirrel, GORM, SQLx, Ent, PGX, Bun, SQLBoiler, Jet, sqlc, goqu, rel, reform</li>
+            <li>Custom rules via DSL configuration</li>
         </ul>
     ]]></description>
 
-    <change-notes><![CDATA[
+    <change-notes
+    ><![CDATA[
         <h3>1.0.0</h3>
         <ul>
             <li>Initial release</li>
-            <li>SELECT * detection in raw SQL and query builders</li>
-            <li>N+1 query detection</li>
-            <li>SQL injection scanning</li>
+            <li>SELECT * detection in raw SQL, string concatenation, format strings, and 12 SQL builders</li>
+            <li>Aliased wildcards (t.*) and subquery detection</li>
+            <li>N+1 query detection in loops</li>
+            <li>SQL injection vulnerability scanning</li>
             <li>Quick fix suggestions</li>
+            <li>Custom rules via DSL configuration</li>
         </ul>
     ]]></change-notes>
 
@@ -34,7 +42,8 @@
         <!-- External annotator for real-time analysis -->
         <externalAnnotator
             language="go"
-            implementationClass="dev.unqueryvet.UnqueryvetAnnotator"/>
+            implementationClass="dev.unqueryvet.UnqueryvetAnnotator"
+        />
 
         <!-- Inspection for batch analysis -->
         <localInspection
@@ -44,24 +53,28 @@
             displayName="SELECT * usage"
             enabledByDefault="true"
             level="WARNING"
-            implementationClass="dev.unqueryvet.SelectStarInspection"/>
+            implementationClass="dev.unqueryvet.SelectStarInspection"
+        />
 
         <!-- Tool window for results -->
         <toolWindow
             id="unqueryvet"
             anchor="bottom"
             factoryClass="dev.unqueryvet.UnqueryvetToolWindowFactory"
-            icon="/icons/unqueryvet.svg"/>
+            icon="/icons/unqueryvet.svg"
+        />
 
         <!-- Settings -->
         <applicationConfigurable
             parentId="tools"
             instance="dev.unqueryvet.UnqueryvetConfigurable"
             id="dev.unqueryvet.settings"
-            displayName="unqueryvet"/>
+            displayName="unqueryvet"
+        />
 
         <applicationService
-            serviceImplementation="dev.unqueryvet.UnqueryvetSettings"/>
+            serviceImplementation="dev.unqueryvet.UnqueryvetSettings"
+        />
 
         <!-- Intention actions -->
         <intentionAction>
@@ -72,19 +85,27 @@
     </extensions>
 
     <actions>
-        <group id="UnqueryvetMenu" text="unqueryvet" description="unqueryvet actions">
-            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        <group
+            id="UnqueryvetMenu"
+            text="unqueryvet"
+            description="unqueryvet actions"
+        >
+            <add-to-group group-id="ToolsMenu" anchor="last" />
 
-            <action id="Unqueryvet.RunAnalysis"
+            <action
+                id="Unqueryvet.RunAnalysis"
                 class="dev.unqueryvet.actions.RunAnalysisAction"
                 text="Run Analysis"
-                description="Run unqueryvet analysis on current file or project"
-                icon="/icons/analyze.svg"/>
+                description="Run SELECT *, N+1, and SQL injection analysis on current file or project"
+                icon="/icons/analyze.svg"
+            />
 
-            <action id="Unqueryvet.FixAll"
+            <action
+                id="Unqueryvet.FixAll"
                 class="dev.unqueryvet.actions.FixAllAction"
                 text="Fix All SELECT *"
-                description="Apply all available fixes"/>
+                description="Apply all available SELECT * fixes in the current file"
+            />
         </group>
     </actions>
 </idea-plugin>
