@@ -52,7 +52,7 @@ func multiLineQuery() {
 
 // Ignored function
 func ignoredFunction() {
-	fmt.Printf("SELECT * FROM debug_table") // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
+	fmt.Printf("SELECT * FROM debug_table") // want "avoid SELECT \\* in format string - explicitly specify needed columns"
 }
 
 // Nolint support removed - now triggers diagnostic

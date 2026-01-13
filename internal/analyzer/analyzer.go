@@ -38,12 +38,7 @@ var (
 
 // NewAnalyzer creates the Unqueryvet analyzer with enhanced logic for production use
 func NewAnalyzer() *analysis.Analyzer {
-	return &analysis.Analyzer{
-		Name:     "unqueryvet",
-		Doc:      "detects SELECT * in SQL queries and SQL builders, preventing performance issues and encouraging explicit column selection",
-		Run:      run,
-		Requires: []*analysis.Analyzer{inspect.Analyzer},
-	}
+	return NewAnalyzerWithSettings(config.DefaultSettings())
 }
 
 // NewAnalyzerWithSettings creates analyzer with provided settings for golangci-lint integration
@@ -115,9 +110,7 @@ func RunWithConfig(pass *analysis.Pass, cfg *config.UnqueryvetSettings) (any, er
 	}
 
 	// Walk through all AST nodes and analyze them
-	insp.Preorder(nodeFilter, func(n ast.Node) {
-		ctx.handleNode(n)
-	})
+	insp.Preorder(nodeFilter, ctx.handleNode)
 
 	return nil, nil
 }
@@ -128,11 +121,14 @@ func (ctx *analysisContext) handleNode(n ast.Node) {
 	case *ast.File:
 		ctx.handleFileNode(node)
 	case *ast.AssignStmt:
+		// Check assignment statements for standalone SQL literals
 		checkAssignStmt(ctx.pass, node, ctx.cfg)
 	case *ast.GenDecl:
+		// Check constant and variable declarations
 		checkGenDecl(ctx.pass, node, ctx.cfg)
 	case *ast.CallExpr:
 		ctx.handleCallExpr(node)
+		// Analyze function calls for SQL with SELECT * usage
 	case *ast.BinaryExpr:
 		ctx.handleBinaryExpr(node)
 	}
@@ -141,6 +137,7 @@ func (ctx *analysisContext) handleNode(n ast.Node) {
 // handleFileNode processes file-level analysis
 func (ctx *analysisContext) handleFileNode(node *ast.File) {
 	if ctx.cfg.CheckSQLBuilders {
+		// Analyze SQL builders only if enabled in configuration
 		analyzeSQLBuilders(ctx.pass, node)
 	}
 	if ctx.cfg.N1DetectionEnabled {
@@ -190,45 +187,6 @@ func (ctx *analysisContext) handleBinaryExpr(node *ast.BinaryExpr) {
 			Message: getDetailedWarningMessage("concat"),
 		})
 	}
-}
-
-// run performs the main analysis of Go code files for SELECT * usage
-func run(pass *analysis.Pass) (any, error) {
-	insp := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-
-	// Define AST node types we're interested in
-	nodeFilter := []ast.Node{
-		(*ast.CallExpr)(nil),   // Function/method calls
-		(*ast.File)(nil),       // Files (for SQL builder analysis)
-		(*ast.AssignStmt)(nil), // Assignment statements for standalone literals
-		(*ast.GenDecl)(nil),    // General declarations (const, var)
-	}
-
-	// Always use default settings since passing settings through ResultOf doesn't work reliably
-	defaultSettings := config.DefaultSettings()
-	cfg := &defaultSettings
-
-	// Walk through all AST nodes and analyze them
-	insp.Preorder(nodeFilter, func(n ast.Node) {
-		switch node := n.(type) {
-		case *ast.File:
-			// Analyze SQL builders only if enabled in configuration
-			if cfg.CheckSQLBuilders {
-				analyzeSQLBuilders(pass, node)
-			}
-		case *ast.AssignStmt:
-			// Check assignment statements for standalone SQL literals
-			checkAssignStmt(pass, node, cfg)
-		case *ast.GenDecl:
-			// Check constant and variable declarations
-			checkGenDecl(pass, node, cfg)
-		case *ast.CallExpr:
-			// Analyze function calls for SQL with SELECT * usage
-			checkCallExpr(pass, node, cfg)
-		}
-	})
-
-	return nil, nil
 }
 
 // checkAssignStmt checks assignment statements for standalone SQL literals
