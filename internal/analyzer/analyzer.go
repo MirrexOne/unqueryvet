@@ -34,12 +34,6 @@ var (
 
 	// subquerySelectStarPattern matches SELECT * in subqueries like "(SELECT * FROM ...)"
 	subquerySelectStarPattern = regexp.MustCompile(`(?i)\(\s*SELECT\s+\*`)
-
-	// n1DetectionEnabled global flag for N+1 detection
-	n1DetectionEnabled bool
-
-	// sqliDetectionEnabled global flag for SQL injection detection
-	sqliDetectionEnabled bool
 )
 
 // NewAnalyzer creates the Unqueryvet analyzer with enhanced logic for production use
@@ -62,16 +56,6 @@ func NewAnalyzerWithSettings(s config.UnqueryvetSettings) *analysis.Analyzer {
 		},
 		Requires: []*analysis.Analyzer{inspect.Analyzer},
 	}
-}
-
-// SetN1Detection enables or disables N+1 query detection globally
-func SetN1Detection(enabled bool) {
-	n1DetectionEnabled = enabled
-}
-
-// SetSQLInjectionDetection enables or disables SQL injection detection globally
-func SetSQLInjectionDetection(enabled bool) {
-	sqliDetectionEnabled = enabled
 }
 
 // analysisContext holds the context for AST analysis
@@ -159,10 +143,10 @@ func (ctx *analysisContext) handleFileNode(node *ast.File) {
 	if ctx.cfg.CheckSQLBuilders {
 		analyzeSQLBuilders(ctx.pass, node)
 	}
-	if n1DetectionEnabled {
+	if ctx.cfg.N1DetectionEnabled {
 		AnalyzeN1(ctx.pass, node)
 	}
-	if sqliDetectionEnabled {
+	if ctx.cfg.SQLInjectionDetectionEnabled {
 		AnalyzeSQLInjection(ctx.pass, node)
 	}
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/MirrexOne/unqueryvet/internal/runner"
 	"github.com/MirrexOne/unqueryvet/internal/tui"
 	"github.com/MirrexOne/unqueryvet/internal/version"
+	"github.com/MirrexOne/unqueryvet/pkg/config"
 )
 
 var (
@@ -56,10 +57,13 @@ func main() {
 		return
 	}
 
+	settings := config.DefaultSettings()
+
+	settings.N1DetectionEnabled = *n1Flag
+	settings.SQLInjectionDetectionEnabled = *sqliFlag
+
 	// Run the analyzer with our custom runner
-	internal.SetN1Detection(*n1Flag)
-	internal.SetSQLInjectionDetection(*sqliFlag)
-	analyzer := internal.NewAnalyzer()
+	analyzer := internal.NewAnalyzerWithSettings(settings)
 	exitCode := runner.Run(analyzer, out, *statsFlag)
 
 	// Exit with proper code
