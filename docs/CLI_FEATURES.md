@@ -4,6 +4,7 @@ This guide covers all the CLI features available in unqueryvet.
 
 ## Table of Contents
 
+- [Default Behavior](#default-behavior)
 - [Version Information](#version-information)
 - [Output Modes](#output-modes)
 - [Colored Output](#colored-output)
@@ -11,6 +12,32 @@ This guide covers all the CLI features available in unqueryvet.
 - [Interactive Fix Mode](#interactive-fix-mode)
 - [Configuration File](#configuration-file)
 - [Enhanced Error Messages](#enhanced-error-messages)
+
+---
+
+## Default Behavior
+
+All three detection rules are **enabled by default**:
+
+| Rule | Default Severity | Description |
+|------|-----------------|-------------|
+| `select-star` | warning | Detects `SELECT *` usage |
+| `n1-queries` | warning | Detects N+1 query patterns (queries in loops) |
+| `sql-injection` | error | Detects SQL injection vulnerabilities |
+
+This means you can simply run:
+
+```bash
+unqueryvet ./...
+```
+
+And all rules will be active without any additional flags.
+
+### Configuration Precedence
+
+1. **CLI flags** `-n1`, `-sqli` (force enable, highest priority)
+2. **`.unqueryvet.yaml`** rules section
+3. **Default settings** (all rules enabled)
 
 ---
 
@@ -128,20 +155,38 @@ The tool automatically detects if output is to a terminal and disables colors fo
 
 ### N+1 Query Detection
 
-Enable detection of potential N+1 query problems:
+N+1 detection is **enabled by default** via the `n1-queries` rule.
+
+The `-n1` flag can be used to force-enable detection even if disabled in config:
 
 ```bash
 $ unqueryvet -n1 ./...
+```
+
+To disable N+1 detection, set in `.unqueryvet.yaml`:
+
+```yaml
+rules:
+  n1-queries: ignore
 ```
 
 Detects queries inside loops that could cause performance issues.
 
 ### SQL Injection Detection
 
-Enable detection of potential SQL injection vulnerabilities:
+SQL injection scanning is **enabled by default** via the `sql-injection` rule (with `error` severity).
+
+The `-sqli` flag can be used to force-enable detection even if disabled in config:
 
 ```bash
 $ unqueryvet -sqli ./...
+```
+
+To disable SQL injection detection, set in `.unqueryvet.yaml`:
+
+```yaml
+rules:
+  sql-injection: ignore
 ```
 
 Detects:
@@ -234,6 +279,13 @@ check-aliased-wildcard: true
 # Diagnostic severity: "error" or "warning"
 severity: warning
 
+# Rules configuration (all enabled by default)
+# N+1 and SQL injection are controlled via rules, not separate flags
+rules:
+  select-star: warning
+  n1-queries: warning
+  sql-injection: error
+
 # Core analysis options
 check-sql-builders: true
 check-aliased-wildcard: true
@@ -242,19 +294,16 @@ check-format-strings: true
 check-string-builder: true
 check-subqueries: true
 
-# Advanced analysis
-check-n1-queries: true
-check-sql-injection: true
-
 # File patterns to ignore (glob)
-ignored-files:
+ignore:
   - "*_test.go"
   - "testdata/**"
   - "vendor/**"
 
-# Allowed SELECT * patterns (regex)
-allowed-patterns:
-  - "SELECT \\* FROM temp_.*"
+# Allowed SELECT * patterns
+allow:
+  - "COUNT(*)"
+  - "information_schema.*"
 ```
 
 ### Configuration Precedence
@@ -415,9 +464,11 @@ CMD ["unqueryvet", "-quiet", "./..."]
 | `-quiet` | Quiet mode (only errors) |
 | `-stats` | Show analysis statistics |
 | `-no-color` | Disable colored output |
-| `-n1` | Detect potential N+1 query problems |
-| `-sqli` | Detect potential SQL injection vulnerabilities |
+| `-n1` | Force enable N+1 detection (overrides config) |
+| `-sqli` | Force enable SQL injection detection (overrides config) |
 | `-fix` | Interactive fix mode |
+
+> **Note**: All rules are enabled by default. The `-n1` and `-sqli` flags act as overrides when rules are disabled in config.
 
 ---
 

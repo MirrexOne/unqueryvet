@@ -446,6 +446,12 @@ func GetN1Violations(pass *analysis.Pass, file *ast.File) []N1Violation {
 	return detector.CheckN1Queries(pass, file)
 }
 
+// CheckN1QueriesNoPass is a method to check for N+1 queries without analysis.Pass.
+// This is useful for testing.
+func (d *N1Detector) CheckN1QueriesNoPass(file *ast.File) []N1Violation {
+	return DetectN1InAST(nil, file)
+}
+
 // DetectN1InAST detects N+1 query problems in an AST file without analysis.Pass.
 // This is designed for use in LSP server where we don't have a full analysis pass.
 func DetectN1InAST(fset *token.FileSet, file *ast.File) []N1Violation {

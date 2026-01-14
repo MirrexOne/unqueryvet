@@ -20,6 +20,8 @@ unqueryvet provides IDE integration through two mechanisms:
 1. **LSP Server** (`unqueryvet-lsp`) - Language Server Protocol for real-time diagnostics
 2. **Native Plugins** - GoLand and VS Code extensions with additional features
 
+> **Note**: All three detection rules (SELECT *, N+1, SQL Injection) are **enabled by default**. No additional configuration is required.
+
 ### Installing the LSP Server
 
 ```bash
@@ -127,12 +129,13 @@ Add to your `.vscode/settings.json`:
 }
 ```
 
-For N+1 and SQL injection detection:
+All rules (SELECT *, N+1, SQL Injection) are enabled by default - no additional args needed.
+
+For verbose logging:
 ```json
 {
   "unqueryvet.enable": true,
   "unqueryvet.path": "unqueryvet-lsp",
-  "unqueryvet.args": ["-n1", "-sqli"],
   "unqueryvet.trace.server": "verbose"
 }
 ```
@@ -197,15 +200,7 @@ lspconfig.unqueryvet.setup({
 })
 ```
 
-For N+1 and SQL injection detection:
-```lua
-configs.unqueryvet = {
-  default_config = {
-    cmd = { 'unqueryvet-lsp', '-n1', '-sqli' },
-    -- ...
-  },
-}
-```
+All rules are enabled by default - no additional flags needed.
 
 ### Vim with vim-lsp
 
@@ -230,13 +225,14 @@ Add to `coc-settings.json`:
   "languageserver": {
     "unqueryvet": {
       "command": "unqueryvet-lsp",
-      "args": ["-n1", "-sqli"],
       "filetypes": ["go"],
       "rootPatterns": ["go.mod", ".git"]
     }
   }
 }
 ```
+
+All rules are enabled by default.
 
 ---
 
@@ -281,8 +277,9 @@ language-servers = ["gopls", "unqueryvet"]
 
 [language-server.unqueryvet]
 command = "unqueryvet-lsp"
-args = ["-n1", "-sqli"]
 ```
+
+All rules are enabled by default.
 
 ---
 

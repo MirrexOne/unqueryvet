@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/MirrexOne/unqueryvet/internal/lsp/protocol"
+	"github.com/MirrexOne/unqueryvet/pkg/config"
 )
 
 func TestAnalyzer_Analyze(t *testing.T) {
@@ -271,5 +272,98 @@ func getOrders(db *sql.DB) error {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		analyzer.Analyze(doc)
+	}
+}
+
+func TestLSPIsRuleEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		rules    map[string]string
+		ruleID   string
+		expected bool
+	}{
+		{
+			name:     "nil rules returns false",
+			rules:    nil,
+			ruleID:   "select-star",
+			expected: false,
+		},
+		{
+			name:     "rule not in map returns false",
+			rules:    map[string]string{"other-rule": "warning"},
+			ruleID:   "select-star",
+			expected: false,
+		},
+		{
+			name:     "rule with warning severity is enabled",
+			rules:    map[string]string{"select-star": "warning"},
+			ruleID:   "select-star",
+			expected: true,
+		},
+		{
+			name:     "rule with error severity is enabled",
+			rules:    map[string]string{"sql-injection": "error"},
+			ruleID:   "sql-injection",
+			expected: true,
+		},
+		{
+			name:     "rule with ignore severity is disabled",
+			rules:    map[string]string{"n1-queries": "ignore"},
+			ruleID:   "n1-queries",
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isRuleEnabled(tt.rules, tt.ruleID)
+			if result != tt.expected {
+				t.Errorf("isRuleEnabled(%v, %q) = %v, want %v", tt.rules, tt.ruleID, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestNewAnalyzerWithConfigEnablesRules(t *testing.T) {
+	// Import config package is needed
+	cfg := config.DefaultSettings()
+
+	analyzer := NewAnalyzerWithConfig(cfg)
+
+	// With default config, both n1 and sqli should be enabled
+	if !analyzer.n1Enabled {
+		t.Error("n1 detection should be enabled with default config")
+	}
+	if !analyzer.sqliEnabled {
+		t.Error("sqli detection should be enabled with default config")
+	}
+}
+
+func TestNewAnalyzerWithConfigDisabledRules(t *testing.T) {
+	cfg := config.DefaultSettings()
+	// Disable n1-queries
+	cfg.Rules["n1-queries"] = "ignore"
+
+	analyzer := NewAnalyzerWithConfig(cfg)
+
+	// n1 should be disabled
+	if analyzer.n1Enabled {
+		t.Error("n1 detection should be disabled when rule is ignore")
+	}
+	// sqli should still be enabled
+	if !analyzer.sqliEnabled {
+		t.Error("sqli detection should still be enabled")
+	}
+}
+
+func TestNewAnalyzerUsesDefaultConfig(t *testing.T) {
+	// NewAnalyzer should use default config which enables all rules
+	analyzer := NewAnalyzer()
+
+	if !analyzer.n1Enabled {
+		t.Error("n1 detection should be enabled by default")
+	}
+	if !analyzer.sqliEnabled {
+		t.Error("sqli detection should be enabled by default")
 	}
 }

@@ -577,16 +577,22 @@ func GetSQLInjectionViolations(pass *analysis.Pass, file *ast.File) []SQLInjecti
 // This is designed for use in LSP server where we don't have a full analysis pass.
 func ScanFileAST(fset *token.FileSet, file *ast.File) []SQLInjectionViolation {
 	scanner := NewSQLInjectionScanner()
+	return scanner.ScanFileNoPass(fset, file)
+}
+
+// ScanFileNoPass scans a file for SQL injection vulnerabilities without analysis.Pass.
+// This is a method version for testing purposes.
+func (s *SQLInjectionScanner) ScanFileNoPass(fset *token.FileSet, file *ast.File) []SQLInjectionViolation {
 	var violations []SQLInjectionViolation
 
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CallExpr:
-			if v := scanner.checkCallExpr(node); v != nil {
+			if v := s.checkCallExpr(node); v != nil {
 				violations = append(violations, *v)
 			}
 		case *ast.BinaryExpr:
-			if v := scanner.checkBinaryExpr(node); v != nil {
+			if v := s.checkBinaryExpr(node); v != nil {
 				violations = append(violations, *v)
 			}
 		}

@@ -16,6 +16,48 @@ func NewRelChecker() *RelChecker {
 	return &RelChecker{}
 }
 
+// Name returns the name of the SQL builder.
+func (c *RelChecker) Name() string {
+	return "rel"
+}
+
+// IsApplicable checks if the call expression might be from rel.
+func (c *RelChecker) IsApplicable(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+
+	method := sel.Sel.Name
+	switch method {
+	case "Find", "FindAll", "FindAndCountAll", "All", "One":
+		return c.isRelRepository(sel.X)
+	}
+	return false
+}
+
+// CheckSelectStar checks a single call expression for SELECT * usage.
+func (c *RelChecker) CheckSelectStar(call *ast.CallExpr) *SelectStarViolation {
+	if !c.isSelectAllPattern(call) {
+		return nil
+	}
+
+	sel := call.Fun.(*ast.SelectorExpr)
+	return &SelectStarViolation{
+		Pos:     call.Pos(),
+		End:     call.End(),
+		Message: "rel: query loads all columns - consider using Select() to specify columns",
+		Builder: "rel",
+		Context: sel.Sel.Name,
+	}
+}
+
+// CheckChainedCalls analyzes method chains for SELECT * patterns.
+func (c *RelChecker) CheckChainedCalls(call *ast.CallExpr) []*SelectStarViolation {
+	// rel doesn't typically use method chaining for SELECT *
+	return nil
+}
+
 // Check analyzes a file for rel SELECT * patterns.
 func (c *RelChecker) Check(pass *analysis.Pass, file *ast.File) {
 	ast.Inspect(file, func(n ast.Node) bool {

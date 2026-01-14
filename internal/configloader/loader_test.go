@@ -100,9 +100,9 @@ check-sql-builders: [invalid yaml content
 			t.Fatalf("LoadConfig() error = %v", err)
 		}
 
-		// Empty config should result in zero values
-		if cfg.CheckSQLBuilders {
-			t.Error("Empty config should have CheckSQLBuilders = false")
+		// Empty config should use default values
+		if !cfg.CheckSQLBuilders {
+			t.Error("Empty config should have CheckSQLBuilders = true (default)")
 		}
 	})
 
@@ -436,4 +436,88 @@ sql-builders:
 	if !cfg.SQLBuilders.Jet {
 		t.Error("SQLBuilders.Jet should be true")
 	}
+}
+
+func TestDefaultRulesInLoadedConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Test that default Rules are preserved when loading a partial config
+	t.Run("partial config preserves default rules", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "partial.yaml")
+		// Config that only sets severity, doesn't mention rules
+		content := `severity: error`
+		if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+
+		// Rules should have default values
+		if cfg.Rules == nil {
+			t.Fatal("Rules should not be nil")
+		}
+		if cfg.Rules["select-star"] != "warning" {
+			t.Errorf("Rules[select-star] = %s, want warning", cfg.Rules["select-star"])
+		}
+		if cfg.Rules["n1-queries"] != "warning" {
+			t.Errorf("Rules[n1-queries] = %s, want warning", cfg.Rules["n1-queries"])
+		}
+		if cfg.Rules["sql-injection"] != "error" {
+			t.Errorf("Rules[sql-injection] = %s, want error", cfg.Rules["sql-injection"])
+		}
+	})
+
+	// Test that user can override rules
+	t.Run("config can override default rules", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "override.yaml")
+		content := `
+rules:
+  select-star: error
+  n1-queries: ignore
+`
+		if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+
+		// User-specified rules should override defaults
+		if cfg.Rules["select-star"] != "error" {
+			t.Errorf("Rules[select-star] = %s, want error", cfg.Rules["select-star"])
+		}
+		if cfg.Rules["n1-queries"] != "ignore" {
+			t.Errorf("Rules[n1-queries] = %s, want ignore", cfg.Rules["n1-queries"])
+		}
+		// sql-injection should still have default value
+		if cfg.Rules["sql-injection"] != "error" {
+			t.Errorf("Rules[sql-injection] = %s, want error", cfg.Rules["sql-injection"])
+		}
+	})
+
+	// Test that empty config uses all defaults
+	t.Run("empty config uses default rules", func(t *testing.T) {
+		configPath := filepath.Join(tmpDir, "empty_rules.yaml")
+		if err := os.WriteFile(configPath, []byte(""), 0o644); err != nil {
+			t.Fatal(err)
+		}
+
+		cfg, err := LoadConfig(configPath)
+		if err != nil {
+			t.Fatalf("LoadConfig() error = %v", err)
+		}
+
+		// All default rules should be present
+		if cfg.Rules == nil {
+			t.Fatal("Rules should not be nil")
+		}
+		if len(cfg.Rules) != 3 {
+			t.Errorf("Rules should have 3 entries, got %d", len(cfg.Rules))
+		}
+	})
 }

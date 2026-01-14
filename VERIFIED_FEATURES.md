@@ -1,6 +1,8 @@
-# Verified Features - unqueryvet v1.5.0
+# Verified Features - unqueryvet
 
 This document lists all implemented and verified features in unqueryvet.
+
+> **Note**: All three detection rules (SELECT *, N+1, SQL Injection) are now **enabled by default**.
 
 ## Core Analysis Features
 
@@ -56,16 +58,10 @@ This document lists all implemented and verified features in unqueryvet.
 - [x] Smart fix suggestions based on issue type
 - [x] Status bar with progress
 
-### Watch Mode
-- [x] File system watching (fsnotify)
-- [x] Config file reload on change
-- [x] Statistics output
-
-### Fix Mode
-- [x] Automatic code fixes
-- [x] Backup before changes
-- [x] Dry-run mode
-- [x] Verbose output
+### Fix Mode (`-fix` flag)
+- [x] Interactive issue review
+- [x] Step-through fix application
+- [x] Skip individual issues
 
 ## IDE Integration
 
@@ -89,12 +85,11 @@ This document lists all implemented and verified features in unqueryvet.
 ## Output Formats
 
 - [x] Text (default, with colors)
-- [x] JSON
-- [x] SARIF (for CI/CD)
 
 ## Configuration
 
 ### Config File (.unqueryvet.yaml)
+- [x] rules (select-star, n1-queries, sql-injection with severity levels)
 - [x] check-sql-builders
 - [x] allowed-patterns (regex)
 - [x] ignored-functions
@@ -106,6 +101,7 @@ This document lists all implemented and verified features in unqueryvet.
 - [x] check-string-builder
 - [x] check-subqueries
 - [x] sql-builders (per-builder enable/disable)
+- [x] custom-rules (DSL-based custom rules)
 
 ### CLI Flags
 - [x] -version
@@ -113,19 +109,15 @@ This document lists all implemented and verified features in unqueryvet.
 - [x] -quiet
 - [x] -stats
 - [x] -no-color
-- [x] -n1 (N+1 detection)
-- [x] -sqli (SQL injection detection)
+- [x] -n1 (force enable N+1 detection, overrides config)
+- [x] -sqli (force enable SQL injection detection, overrides config)
 - [x] -fix (interactive TUI mode)
 
-### Planned CLI Flags (not yet implemented)
-- [ ] -config (custom config path)
-- [ ] -format (text/json/sarif output format)
-- [ ] -watch (file watching mode)
-- [ ] -severity (override severity level)
+> **Note**: `-n1` and `-sqli` flags now act as overrides. All rules are enabled by default via config.
 
 ## CI/CD Integration
 
 - [x] golangci-lint plugin
 - [x] GitHub Actions example
 - [x] GitLab CI example
-- [x] Exit codes (0 = no issues, 1 = issues found, 2 = error)
+- [x] Exit codes (0 = no issues, 1 = warnings, 2 = errors, 3 = analysis failed)

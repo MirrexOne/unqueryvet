@@ -1,9 +1,10 @@
 {
   "name": "unqueryvet",
-  "displayName": "Unqueryvet - SQL Inconsistencies Detector",
-  "description": "Detect and fix inconsistencies in SQL queries for Go projects",
+  "displayName": "Unqueryvet - SQL Linter for Go",
+  "description": "Detect SELECT *, N+1 queries, and SQL injection vulnerabilities in Go projects",
   "version": "1.0.0",
   "publisher": "unqueryvet",
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -17,8 +18,20 @@
     "sql",
     "linter",
     "select *",
-    "database"
+    "n+1",
+    "sql injection",
+    "database",
+    "gorm",
+    "sqlx"
   ],
+  "homepage": "https://github.com/MirrexOne/unqueryvet",
+  "bugs": {
+    "url": "https://github.com/MirrexOne/unqueryvet/issues"
+  },
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onLanguage:go"
   ],

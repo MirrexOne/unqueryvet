@@ -31,9 +31,7 @@
       "items": {
         "type": "string"
       },
-      "examples": [
-        ["*_test.go", "testdata/**", "vendor/**"]
-      ]
+      "examples": [["*_test.go", "testdata/**", "vendor/**"]]
     },
     "allow": {
       "type": "array",
@@ -41,9 +39,7 @@
       "items": {
         "type": "string"
       },
-      "examples": [
-        ["COUNT(*)", "information_schema.*"]
-      ]
+      "examples": [["COUNT(*)", "information_schema.*"]]
     },
     "severity": {
       "$ref": "#/definitions/severityLevel",
@@ -79,16 +75,6 @@
       "type": "boolean",
       "description": "Enable SELECT * detection in subqueries",
       "default": true
-    },
-    "check-n1-queries": {
-      "type": "boolean",
-      "description": "Enable N+1 query detection",
-      "default": false
-    },
-    "check-sql-injection": {
-      "type": "boolean",
-      "description": "Enable SQL injection vulnerability detection",
-      "default": false
     },
     "sql-builders": {
       "type": "object",
@@ -171,9 +157,7 @@
       "items": {
         "type": "string"
       },
-      "examples": [
-        ["debug\\..*", "test.*"]
-      ]
+      "examples": [["debug\\..*", "test.*"]]
     },
     "allowed-patterns": {
       "type": "array",
@@ -276,10 +260,7 @@
           "description": "Suggested fix message"
         }
       },
-      "oneOf": [
-        { "required": ["pattern"] },
-        { "required": ["patterns"] }
-      ]
+      "oneOf": [{ "required": ["pattern"] }, { "required": ["patterns"] }]
     }
   }
 }

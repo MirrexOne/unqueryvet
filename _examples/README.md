@@ -53,29 +53,7 @@ Features:
 golangci-lint run -c permissive-config.yml ./...
 ```
 
-## Code Examples
-
-See `testdata/example.go` for code examples demonstrating:
-
-- Patterns that unqueryvet will warn about
-- Recommended patterns that pass validation
-- How to suppress warnings with `//nolint:unqueryvet`
-- SQL builder usage patterns for all 12 supported builders
-
 ## Running the Examples
-
-### Analyze Example File
-
-```bash
-# From project root
-go run ./cmd/unqueryvet ./_examples/testdata/example.go
-
-# With verbose output
-go run ./cmd/unqueryvet -verbose ./_examples/testdata/example.go
-
-# With N+1 and SQL injection detection
-go run ./cmd/unqueryvet -n1 -sqli ./_examples/testdata/example.go
-```
 
 ### Using Configuration Files
 
@@ -104,16 +82,19 @@ Start with the example that best matches your needs and customize:
 # .unqueryvet.yaml in your project root
 severity: warning
 
+# Rules configuration (all enabled by default)
+# N+1 and SQL injection are controlled via rules section
+rules:
+  select-star: warning
+  n1-queries: warning
+  sql-injection: error
+
 # Core checks
 check-sql-builders: true
 check-aliased-wildcard: true
 check-string-concat: true
 check-format-strings: true
 check-subqueries: true
-
-# Advanced checks
-check-n1-queries: true
-check-sql-injection: true
 
 # SQL builders (enable only what you use)
 sql-builders:
@@ -122,14 +103,14 @@ sql-builders:
   # ... others disabled
 
 # Project-specific patterns
-ignored-files:
+ignore:
   - "*_test.go"
   - "testdata/**"
   - "vendor/**"
   - "migrations/**"
 
 # Allow SELECT * for specific tables
-allowed-patterns:
+allow:
   - "SELECT \\* FROM audit_log"
   - "SELECT \\* FROM temp_.*"
 ```

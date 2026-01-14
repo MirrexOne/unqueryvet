@@ -46,6 +46,42 @@ func TestDefaultSettings(t *testing.T) {
 	}
 }
 
+func TestDefaultRulesEnabled(t *testing.T) {
+	defaults := unqueryvet.DefaultSettings()
+
+	// Verify that Rules map is initialized
+	if defaults.Rules == nil {
+		t.Fatal("Rules should not be nil by default")
+	}
+
+	// Verify select-star rule is enabled by default
+	if severity, ok := defaults.Rules["select-star"]; !ok {
+		t.Error("select-star rule should be present by default")
+	} else if severity == "ignore" {
+		t.Error("select-star rule should not be 'ignore' by default")
+	} else if severity != "warning" {
+		t.Errorf("select-star rule should be 'warning' by default, got %s", severity)
+	}
+
+	// Verify n1-queries rule is enabled by default
+	if severity, ok := defaults.Rules["n1-queries"]; !ok {
+		t.Error("n1-queries rule should be present by default")
+	} else if severity == "ignore" {
+		t.Error("n1-queries rule should not be 'ignore' by default")
+	} else if severity != "warning" {
+		t.Errorf("n1-queries rule should be 'warning' by default, got %s", severity)
+	}
+
+	// Verify sql-injection rule is enabled by default
+	if severity, ok := defaults.Rules["sql-injection"]; !ok {
+		t.Error("sql-injection rule should be present by default")
+	} else if severity == "ignore" {
+		t.Error("sql-injection rule should not be 'ignore' by default")
+	} else if severity != "error" {
+		t.Errorf("sql-injection rule should be 'error' by default, got %s", severity)
+	}
+}
+
 func containsCountPattern(patterns []string) bool {
 	for _, pattern := range patterns {
 		if strings.Contains(pattern, "COUNT") {

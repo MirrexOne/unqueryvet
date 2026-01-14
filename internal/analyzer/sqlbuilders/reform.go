@@ -17,6 +17,49 @@ func NewReformChecker() *ReformChecker {
 	return &ReformChecker{}
 }
 
+// Name returns the name of the SQL builder.
+func (c *ReformChecker) Name() string {
+	return "reform"
+}
+
+// IsApplicable checks if the call expression might be from reform.
+func (c *ReformChecker) IsApplicable(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok {
+		return false
+	}
+
+	method := sel.Sel.Name
+	switch method {
+	case "FindByPrimaryKeyFrom", "FindOneFrom", "FindAllFrom",
+		"SelectOneFrom", "SelectAllFrom", "SelectRows":
+		return c.isReformDB(sel.X) || c.isQuerier(sel.X)
+	}
+	return false
+}
+
+// CheckSelectStar checks a single call expression for SELECT * usage.
+func (c *ReformChecker) CheckSelectStar(call *ast.CallExpr) *SelectStarViolation {
+	v := c.checkCall(call)
+	if v == nil {
+		return nil
+	}
+
+	return &SelectStarViolation{
+		Pos:     v.Pos,
+		End:     v.End,
+		Message: v.Message,
+		Builder: "reform",
+		Context: v.Method,
+	}
+}
+
+// CheckChainedCalls analyzes method chains for SELECT * patterns.
+func (c *ReformChecker) CheckChainedCalls(call *ast.CallExpr) []*SelectStarViolation {
+	// reform doesn't typically use method chaining for SELECT *
+	return nil
+}
+
 // Check analyzes a file for reform SELECT * patterns.
 func (c *ReformChecker) Check(pass *analysis.Pass, file *ast.File) {
 	ast.Inspect(file, func(n ast.Node) bool {

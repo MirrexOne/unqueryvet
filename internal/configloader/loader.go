@@ -19,13 +19,15 @@ const (
 )
 
 // LoadConfig loads configuration from a YAML file.
+// It starts with default settings and overlays values from the file.
 func LoadConfig(path string) (*config.UnqueryvetSettings, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
 
-	var cfg config.UnqueryvetSettings
+	// Start with default settings so unspecified fields use defaults
+	cfg := config.DefaultSettings()
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %w", err)
 	}

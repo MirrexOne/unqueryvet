@@ -10,6 +10,7 @@ import (
 
 	"github.com/MirrexOne/unqueryvet/internal/analyzer"
 	"github.com/MirrexOne/unqueryvet/internal/lsp/protocol"
+	"github.com/MirrexOne/unqueryvet/pkg/config"
 )
 
 // StructInfo contains information about a Go struct and its database columns.
@@ -55,21 +56,46 @@ type Issue struct {
 	Suggestion string
 }
 
-// NewAnalyzer creates a new SQL analyzer.
+// NewAnalyzer creates a new SQL analyzer with default settings.
 func NewAnalyzer() *Analyzer {
+	return NewAnalyzerWithConfig(config.DefaultSettings())
+}
+
+// NewAnalyzerWithConfig creates a new SQL analyzer with the given configuration.
+func NewAnalyzerWithConfig(cfg config.UnqueryvetSettings) *Analyzer {
+	// Compile allowed patterns from config
+	var allowedPatterns []*regexp.Regexp
+	for _, pattern := range cfg.AllowedPatterns {
+		if compiled, err := regexp.Compile(pattern); err == nil {
+			allowedPatterns = append(allowedPatterns, compiled)
+		}
+	}
+
+	// Enable N+1 and SQL injection detection based on Rules configuration
+	n1Enabled := isRuleEnabled(cfg.Rules, "n1-queries")
+	sqliEnabled := isRuleEnabled(cfg.Rules, "sql-injection")
+
 	return &Analyzer{
 		selectStarPattern:      regexp.MustCompile(`(?i)SELECT\s+\*\s+FROM`),
 		aliasedWildcardPattern: regexp.MustCompile(`(?i)SELECT\s+([a-zA-Z_][a-zA-Z0-9_]*)\.\*`),
 		subqueryPattern:        regexp.MustCompile(`(?i)\(\s*SELECT\s+\*`),
-		allowedPatterns: []*regexp.Regexp{
-			regexp.MustCompile(`(?i)COUNT\s*\(\s*\*\s*\)`),
-			regexp.MustCompile(`(?i)SELECT\s+\*\s+FROM\s+information_schema`),
-			regexp.MustCompile(`(?i)SELECT\s+\*\s+FROM\s+pg_catalog`),
-			regexp.MustCompile(`(?i)SELECT\s+\*\s+FROM\s+sys\.`),
-		},
-		n1Enabled:   false,
-		sqliEnabled: false,
+		allowedPatterns:        allowedPatterns,
+		n1Enabled:              n1Enabled,
+		sqliEnabled:            sqliEnabled,
 	}
+}
+
+// isRuleEnabled checks if a rule is enabled based on its severity in the Rules map.
+// A rule is enabled if it exists in the map and its severity is not "ignore".
+func isRuleEnabled(rules config.RuleSeverity, ruleID string) bool {
+	if rules == nil {
+		return false
+	}
+	severity, exists := rules[ruleID]
+	if !exists {
+		return false
+	}
+	return severity != "ignore"
 }
 
 // SetN1Detection enables or disables N+1 query detection.

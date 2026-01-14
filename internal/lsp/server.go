@@ -10,6 +10,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/MirrexOne/unqueryvet/internal/configloader"
 	"github.com/MirrexOne/unqueryvet/internal/lsp/protocol"
 )
 
@@ -53,11 +54,18 @@ type Document struct {
 
 // NewServer creates a new LSP server.
 func NewServer(in io.Reader, out, logger io.Writer) *Server {
+	// Load configuration from file or use defaults
+	cfg, err := configloader.LoadOrDefault("")
+	if err != nil {
+		// If config loading fails, use defaults
+		cfg, _ = configloader.LoadOrDefault("")
+	}
+
 	return &Server{
 		reader:    json.NewDecoder(in),
 		writer:    json.NewEncoder(out),
 		documents: make(map[string]*Document),
-		analyzer:  NewAnalyzer(),
+		analyzer:  NewAnalyzerWithConfig(*cfg),
 		logger:    logger,
 	}
 }

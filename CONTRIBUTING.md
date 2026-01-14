@@ -108,11 +108,14 @@ unqueryvet/
 
 | Package | Description |
 |---------|-------------|
-| `internal/analyzer` | Core SELECT * detection logic |
+| `internal/analyzer` | Core detection logic (SELECT *, N+1, SQL Injection) |
 | `internal/analyzer/sqlbuilders` | Support for 12 SQL builder libraries |
 | `internal/dsl` | Custom rules DSL using expr-lang |
 | `internal/lsp` | Language Server Protocol implementation |
 | `internal/tui` | Interactive terminal UI with Bubble Tea |
+| `pkg/config` | Configuration with default rules |
+
+> **Note**: All three detection rules (SELECT *, N+1, SQL Injection) are enabled by default.
 
 ---
 
@@ -333,7 +336,6 @@ Please include:
 
 ## Questions?
 
-- Open a [GitHub Discussion](https://github.com/MirrexOne/unqueryvet/discussions)
-- Check existing [Issues](https://github.com/MirrexOne/unqueryvet/issues)
+- Open a [GitHub Issue](https://github.com/MirrexOne/unqueryvet/issues)
 
 Thank you for contributing!

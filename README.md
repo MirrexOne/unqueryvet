@@ -1,7 +1,7 @@
 # unqueryvet
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/MirrexOne/unqueryvet)](https://goreportcard.com/report/github.com/MirrexOne/unqueryvet)
-[![GoDoc](https://godoc.org/github.com/MirrexOne/unqueryvet?status.svg)](https://godoc.org/github.com/MirrexOne/unqueryvet)
+[![Go Reference](https://pkg.go.dev/badge/github.com/MirrexOne/unqueryvet.svg)](https://pkg.go.dev/github.com/MirrexOne/unqueryvet)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 **unqueryvet** is a comprehensive Go static analysis tool (linter) for SQL queries. It detects `SELECT *` usage, N+1 query problems, SQL injection vulnerabilities, and provides suggestions for query optimization.
@@ -64,7 +64,7 @@ linters:
 ### Basic Usage
 
 ```bash
-# Analyze all packages
+# Analyze all packages (all rules enabled by default)
 unqueryvet ./...
 
 # Verbose output with explanations
@@ -72,12 +72,6 @@ unqueryvet -verbose ./...
 
 # Quiet mode (errors only) for CI/CD
 unqueryvet -quiet ./...
-
-# Enable N+1 detection
-unqueryvet -n1 ./...
-
-# Enable SQL injection scanning
-unqueryvet -sqli ./...
 
 # Show statistics
 unqueryvet -stats ./...
@@ -89,6 +83,23 @@ unqueryvet -fix ./...
 unqueryvet -version
 ```
 
+### Default Rules
+
+All three detection rules are **enabled by default**:
+
+| Rule | Default Severity | Description |
+|------|-----------------|-------------|
+| `select-star` | warning | Detects `SELECT *` usage |
+| `n1-queries` | warning | Detects N+1 query patterns (queries in loops) |
+| `sql-injection` | error | Detects SQL injection vulnerabilities |
+
+To disable a rule, set its severity to `ignore` in your `.unqueryvet.yaml`:
+
+```yaml
+rules:
+  n1-queries: ignore  # Disable N+1 detection
+```
+
 ### CLI Flags
 
 | Flag | Description |
@@ -98,8 +109,8 @@ unqueryvet -version
 | `-quiet` | Quiet mode (only errors) |
 | `-stats` | Show analysis statistics |
 | `-no-color` | Disable colored output |
-| `-n1` | Detect potential N+1 query problems |
-| `-sqli` | Detect potential SQL injection vulnerabilities |
+| `-n1` | Force enable N+1 detection (overrides config) |
+| `-sqli` | Force enable SQL injection detection (overrides config) |
 | `-fix` | Interactive fix mode - step through issues and apply fixes |
 
 ### With Configuration File
@@ -109,9 +120,14 @@ unqueryvet -version
 cat > .unqueryvet.yaml << 'EOF'
 severity: warning
 check-sql-builders: true
-check-n1-queries: true
-check-sql-injection: true
-ignored-files:
+
+# Rules are enabled by default - configure severity if needed
+rules:
+  select-star: warning
+  n1-queries: warning
+  sql-injection: error
+
+ignore:
   - "*_test.go"
   - "vendor/**"
 EOF
@@ -224,7 +240,14 @@ db.NamedQuery(query, map[string]interface{}{"id": userID})
 ### Full Configuration File (.unqueryvet.yaml)
 
 ```yaml
-# Diagnostic severity: "error" or "warning"
+# Built-in rules severity (all enabled by default)
+# Available values: error, warning, info, ignore
+rules:
+  select-star: warning    # SELECT * detection
+  n1-queries: warning     # N+1 query detection
+  sql-injection: error    # SQL injection scanning
+
+# Diagnostic severity for legacy options: "error" or "warning"
 severity: warning
 
 # Core analysis options
@@ -234,10 +257,6 @@ check-string-concat: true
 check-format-strings: true
 check-string-builder: true
 check-subqueries: true
-
-# Advanced analysis
-check-n1-queries: true # N+1 query detection
-check-sql-injection: true # SQL injection scanning
 
 # SQL builder libraries to check
 sql-builders:
@@ -271,23 +290,6 @@ allowed-patterns:
   - "SELECT \\* FROM information_schema\\..*"
   - "SELECT \\* FROM pg_catalog\\..*"
   - "SELECT \\* FROM temp_.*"
-
-# Output options
-output:
-  format: text # text, json, sarif
-  color: auto # auto, always, never
-  verbose: false
-  quiet: false
-```
-
-### Environment Variables
-
-```bash
-# Disable colors
-export NO_COLOR=1
-
-# Set config path
-export UNQUERYVET_CONFIG=/path/to/.unqueryvet.yaml
 ```
 
 ---
@@ -399,7 +401,7 @@ Install the extension from `extensions/vscode/` or configure manually:
 {
   "unqueryvet.enable": true,
   "unqueryvet.path": "unqueryvet-lsp",
-  "unqueryvet.args": ["-n1", "-sqli"],
+  // All rules enabled by default, args optional
   "unqueryvet.trace.server": "verbose"
 }
 ```
@@ -710,52 +712,6 @@ sql-lint:
 
 ---
 
-## Output Formats
-
-### Text (default)
-
-```
-internal/api/users.go:42:15: avoid SELECT * - explicitly specify needed columns
-internal/api/orders.go:78:10: potential N+1 query detected - query inside loop
-```
-
-### JSON
-
-```bash
-unqueryvet -format=json ./...
-```
-
-```json
-{
-  "issues": [
-    {
-      "file": "internal/api/users.go",
-      "line": 42,
-      "column": 15,
-      "severity": "warning",
-      "message": "avoid SELECT * - explicitly specify needed columns",
-      "rule": "select-star",
-      "suggestion": "SELECT id, name, email FROM users"
-    }
-  ],
-  "summary": {
-    "total": 5,
-    "errors": 0,
-    "warnings": 5,
-    "files_analyzed": 127,
-    "duration_ms": 2340
-  }
-}
-```
-
-### SARIF (for GitHub Code Scanning)
-
-```bash
-unqueryvet -format=sarif ./... > results.sarif
-```
-
----
-
 ## Exit Codes
 
 | Code | Meaning |
@@ -772,6 +728,7 @@ unqueryvet -format=sarif ./... > results.sarif
 - [CLI Features Guide](docs/CLI_FEATURES.md)
 - [Custom Rules DSL](docs/DSL.md)
 - [IDE Integration Guide](docs/IDE_INTEGRATION.md)
+- [Verified Features](VERIFIED_FEATURES.md)
 
 ---
 
@@ -829,4 +786,3 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Support
 
 - **Bug Reports**: [GitHub Issues](https://github.com/MirrexOne/unqueryvet/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/MirrexOne/unqueryvet/discussions)

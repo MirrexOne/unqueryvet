@@ -18,10 +18,18 @@ Unqueryvet provides a powerful Domain-Specific Language (DSL) for defining custo
 
 ## Quick Start
 
-Create a `.unqueryvet.yaml` file in your project root:
+All three detection rules are **enabled by default**:
+
+| Rule | Default Severity | Description |
+|------|-----------------|-------------|
+| `select-star` | warning | SELECT * detection |
+| `n1-queries` | warning | N+1 query detection |
+| `sql-injection` | error | SQL injection scanning |
+
+You can customize by creating a `.unqueryvet.yaml` file in your project root:
 
 ```yaml
-# Simple rule configuration
+# Customize rule severity (all enabled by default)
 rules:
   select-star: warning
   n1-queries: warning
@@ -37,7 +45,14 @@ allow:
   - "COUNT(*)"
 ```
 
-That's it! Run `unqueryvet ./...` and it will use your configuration.
+To disable a rule, set its severity to `ignore`:
+
+```yaml
+rules:
+  n1-queries: ignore  # Disable N+1 detection
+```
+
+Run `unqueryvet ./...` and it will use your configuration.
 
 ---
 
@@ -300,6 +315,7 @@ Access captured values: `metavars["TABLE"]`, `metavars["VAR"]`
 | `len(list)` | Get length of list or string | `len(tables) > 1` |
 | `any(list, substr)` | Check if any element contains substr | `any(columns, "password")` |
 | `all(list, substr)` | Check if all elements contain substr | `all(tables, "audit_")` |
+| `contains_any(s, substrs...)` | Check if string contains any of substrs | `contains_any(query, "DROP", "TRUNCATE")` |
 
 ---
 

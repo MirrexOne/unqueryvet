@@ -117,6 +117,18 @@ type SQLBuildersConfig struct {
 
 	// Jet enables checking github.com/go-jet/jet
 	Jet bool `mapstructure:"jet" json:"jet" yaml:"jet"`
+
+	// Sqlc enables checking github.com/sqlc-dev/sqlc generated code
+	Sqlc bool `mapstructure:"sqlc" json:"sqlc" yaml:"sqlc"`
+
+	// Goqu enables checking github.com/doug-martin/goqu
+	Goqu bool `mapstructure:"goqu" json:"goqu" yaml:"goqu"`
+
+	// Rel enables checking github.com/go-rel/rel
+	Rel bool `mapstructure:"rel" json:"rel" yaml:"rel"`
+
+	// Reform enables checking gopkg.in/reform.v1
+	Reform bool `mapstructure:"reform" json:"reform" yaml:"reform"`
 }
 
 // DefaultSQLBuildersConfig returns the default SQL builders configuration with all checkers enabled.
@@ -130,6 +142,10 @@ func DefaultSQLBuildersConfig() SQLBuildersConfig {
 		Bun:       true,
 		SQLBoiler: true,
 		Jet:       true,
+		Sqlc:      true,
+		Goqu:      true,
+		Rel:       true,
+		Reform:    true,
 	}
 }
 
@@ -155,5 +171,10 @@ func DefaultSettings() UnqueryvetSettings {
 		IgnoredFunctions: []string{},
 		IgnoredFiles:     []string{},
 		SQLBuilders:      DefaultSQLBuildersConfig(),
+		Rules: RuleSeverity{
+			"select-star":   "warning",
+			"n1-queries":    "warning",
+			"sql-injection": "error",
+		},
 	}
 }

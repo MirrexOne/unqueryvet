@@ -382,3 +382,213 @@ func TestFilterContext(t *testing.T) {
 		t.Error("SELECT * FROM users should not be allowed")
 	}
 }
+
+func TestIsRuleEnabled(t *testing.T) {
+	tests := []struct {
+		name     string
+		rules    config.RuleSeverity
+		ruleID   string
+		expected bool
+	}{
+		{
+			name:     "nil rules returns false",
+			rules:    nil,
+			ruleID:   "select-star",
+			expected: false,
+		},
+		{
+			name:     "rule not in map returns false",
+			rules:    config.RuleSeverity{"other-rule": "warning"},
+			ruleID:   "select-star",
+			expected: false,
+		},
+		{
+			name:     "rule with warning severity is enabled",
+			rules:    config.RuleSeverity{"select-star": "warning"},
+			ruleID:   "select-star",
+			expected: true,
+		},
+		{
+			name:     "rule with error severity is enabled",
+			rules:    config.RuleSeverity{"sql-injection": "error"},
+			ruleID:   "sql-injection",
+			expected: true,
+		},
+		{
+			name:     "rule with info severity is enabled",
+			rules:    config.RuleSeverity{"n1-queries": "info"},
+			ruleID:   "n1-queries",
+			expected: true,
+		},
+		{
+			name:     "rule with ignore severity is disabled",
+			rules:    config.RuleSeverity{"n1-queries": "ignore"},
+			ruleID:   "n1-queries",
+			expected: false,
+		},
+		{
+			name:     "empty string severity is enabled",
+			rules:    config.RuleSeverity{"select-star": ""},
+			ruleID:   "select-star",
+			expected: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := isRuleEnabled(tt.rules, tt.ruleID)
+			if result != tt.expected {
+				t.Errorf("isRuleEnabled(%v, %q) = %v, want %v", tt.rules, tt.ruleID, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestDefaultRulesEnableDetection(t *testing.T) {
+	defaults := config.DefaultSettings()
+
+	// With default settings, all rules should be enabled
+	if !isRuleEnabled(defaults.Rules, "select-star") {
+		t.Error("select-star should be enabled with default settings")
+	}
+	if !isRuleEnabled(defaults.Rules, "n1-queries") {
+		t.Error("n1-queries should be enabled with default settings")
+	}
+	if !isRuleEnabled(defaults.Rules, "sql-injection") {
+		t.Error("sql-injection should be enabled with default settings")
+	}
+}
+
+func TestRulesCanBeDisabled(t *testing.T) {
+	cfg := config.DefaultSettings()
+
+	// Override to disable n1-queries
+	cfg.Rules["n1-queries"] = "ignore"
+
+	// select-star and sql-injection should still be enabled
+	if !isRuleEnabled(cfg.Rules, "select-star") {
+		t.Error("select-star should still be enabled")
+	}
+	if !isRuleEnabled(cfg.Rules, "sql-injection") {
+		t.Error("sql-injection should still be enabled")
+	}
+
+	// n1-queries should be disabled
+	if isRuleEnabled(cfg.Rules, "n1-queries") {
+		t.Error("n1-queries should be disabled when set to ignore")
+	}
+}
+
+func TestDefaultRulesIntegration(t *testing.T) {
+	// Test that default rules work correctly in RunWithConfig
+	defaults := config.DefaultSettings()
+
+	t.Run("default config has all rules enabled", func(t *testing.T) {
+		// Verify the defaults are correct
+		if defaults.Rules == nil {
+			t.Fatal("Rules should not be nil in default config")
+		}
+
+		expectedRules := map[string]string{
+			"select-star":   "warning",
+			"n1-queries":    "warning",
+			"sql-injection": "error",
+		}
+
+		for rule, expectedSeverity := range expectedRules {
+			severity, ok := defaults.Rules[rule]
+			if !ok {
+				t.Errorf("rule %q not found in default config", rule)
+				continue
+			}
+			if severity != expectedSeverity {
+				t.Errorf("rule %q severity = %q, want %q", rule, severity, expectedSeverity)
+			}
+		}
+	})
+
+	t.Run("select-star rule is not ignore", func(t *testing.T) {
+		if defaults.Rules["select-star"] == "ignore" {
+			t.Error("select-star should not be ignore by default")
+		}
+	})
+
+	t.Run("n1-queries rule is not ignore", func(t *testing.T) {
+		if defaults.Rules["n1-queries"] == "ignore" {
+			t.Error("n1-queries should not be ignore by default")
+		}
+	})
+
+	t.Run("sql-injection rule is not ignore", func(t *testing.T) {
+		if defaults.Rules["sql-injection"] == "ignore" {
+			t.Error("sql-injection should not be ignore by default")
+		}
+	})
+}
+
+func TestRuleSeverityValues(t *testing.T) {
+	validSeverities := []string{"error", "warning", "info", "ignore", ""}
+
+	for _, severity := range validSeverities {
+		rules := config.RuleSeverity{"test-rule": severity}
+
+		if severity == "ignore" {
+			if isRuleEnabled(rules, "test-rule") {
+				t.Errorf("rule with severity %q should be disabled", severity)
+			}
+		} else {
+			if !isRuleEnabled(rules, "test-rule") {
+				t.Errorf("rule with severity %q should be enabled", severity)
+			}
+		}
+	}
+}
+
+func TestDefaultSettingsAllFieldsInitialized(t *testing.T) {
+	defaults := config.DefaultSettings()
+
+	// Check all boolean fields are set to expected values
+	boolFields := map[string]bool{
+		"CheckSQLBuilders":     defaults.CheckSQLBuilders,
+		"CheckAliasedWildcard": defaults.CheckAliasedWildcard,
+		"CheckStringConcat":    defaults.CheckStringConcat,
+		"CheckFormatStrings":   defaults.CheckFormatStrings,
+		"CheckStringBuilder":   defaults.CheckStringBuilder,
+		"CheckSubqueries":      defaults.CheckSubqueries,
+	}
+
+	for name, value := range boolFields {
+		if !value {
+			t.Errorf("%s should be true by default", name)
+		}
+	}
+
+	// Check string fields
+	if defaults.Severity != "warning" {
+		t.Errorf("Severity should be 'warning', got %q", defaults.Severity)
+	}
+
+	// Check slice fields are not nil
+	if defaults.AllowedPatterns == nil {
+		t.Error("AllowedPatterns should not be nil")
+	}
+	if len(defaults.AllowedPatterns) == 0 {
+		t.Error("AllowedPatterns should have default entries")
+	}
+
+	// Check Rules map
+	if defaults.Rules == nil {
+		t.Error("Rules should not be nil")
+	}
+	if len(defaults.Rules) != 3 {
+		t.Errorf("Rules should have 3 entries, got %d", len(defaults.Rules))
+	}
+
+	// Check SQLBuilders config
+	sqlBuilders := defaults.SQLBuilders
+	if !sqlBuilders.Squirrel || !sqlBuilders.GORM || !sqlBuilders.SQLx ||
+		!sqlBuilders.Ent || !sqlBuilders.PGX || !sqlBuilders.Bun ||
+		!sqlBuilders.SQLBoiler || !sqlBuilders.Jet {
+		t.Error("All SQL builders should be enabled by default")
+	}
+}
