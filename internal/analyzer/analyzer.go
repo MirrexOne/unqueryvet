@@ -564,3 +564,21 @@ func hasStarInColumns(call *ast.CallExpr) bool {
 	}
 	return false
 }
+
+// IsRuleEnabledExported checks if a rule is enabled in the configuration.
+// A rule is enabled if it exists in the Rules map and its severity is not "ignore".
+func IsRuleEnabledExported(rules config.RuleSeverity, ruleID string) bool {
+	if rules == nil {
+		return false
+	}
+	severity, exists := rules[ruleID]
+	if !exists {
+		return false
+	}
+	return severity != "ignore"
+}
+
+// isRuleEnabled is an internal helper for checking rule enablement.
+func isRuleEnabled(rules config.RuleSeverity, ruleID string) bool {
+	return IsRuleEnabledExported(rules, ruleID)
+}
