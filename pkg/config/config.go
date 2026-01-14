@@ -84,6 +84,12 @@ type UnqueryvetSettings struct {
 
 	// Ignore is a list of file patterns to ignore (in addition to IgnoredFiles).
 	Ignore []string `mapstructure:"ignore" json:"ignore" yaml:"ignore,omitempty"`
+
+	// N1DetectionEnabled global flag for N+1 detection
+	N1DetectionEnabled bool `mapstructure:"check-n1-queries" json:"check-n1-queries" yaml:"check-n1-queries,omitempty"`
+
+	// SQLInjectionDetectionEnabled global flag for SQL injection detection
+	SQLInjectionDetectionEnabled bool `mapstructure:"check-sql-injection" json:"check-sql-injection" yaml:"check-sql-injection,omitempty"`
 }
 
 // SQLBuildersConfig defines which SQL builder libraries to analyze.

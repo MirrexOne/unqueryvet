@@ -95,9 +95,9 @@ func multilineSQL() {
 // Functions that will trigger warnings with default config
 func defaultBehavior() {
 	// These will trigger warnings with minimal default config
-	fmt.Printf("SELECT * FROM debug_table")      // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
-	fmt.Sprintf("SELECT * FROM temp_%s", "data") // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
-	log.Printf("Executing: SELECT * FROM logs")  // want "avoid SELECT \\* - explicitly specify needed columns for better performance, maintainability and stability"
+	fmt.Printf("SELECT * FROM debug_table")      // want "avoid SELECT \\* in format string - explicitly specify needed columns"
+	fmt.Sprintf("SELECT * FROM temp_%s", "data") // want "avoid SELECT \\* in format string - explicitly specify needed columns"
+	log.Printf("Executing: SELECT * FROM logs")  // want "avoid SELECT \\* in format string - explicitly specify needed columns"
 
 	// File operations
 	_, _ = os.Open("file.sql")
