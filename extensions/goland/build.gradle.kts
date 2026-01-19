@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "dev.unqueryvet"
-version = "1.0.0"
+version = "1.5.1"
 
 repositories {
     mavenCentral()

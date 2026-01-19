@@ -2,6 +2,28 @@
 
 All notable changes to the Unqueryvet VS Code extension will be documented in this file.
 
+## [1.5.1] - 2025-01-19
+
+### Added
+
+- **Automatic LSP server download** - Extension now automatically downloads and installs the LSP server on first use
+- **Cross-platform support** - Pre-built binaries for Windows, Linux, macOS (amd64 and arm64)
+- **Intelligent LSP discovery** - Automatically finds LSP in PATH, GOPATH/bin, or downloads if missing
+- **Progress indicators** - Download progress bar with size information
+- **Multiple installation options** - Automatic download, manual installation, or custom path
+
+### Changed
+
+- **Simplified installation** - No need to manually install LSP server via `go install`
+- **Improved error messages** - Better guidance when LSP server is not found
+- **Updated README** - Added automatic installation documentation
+- **Publisher ID** - Changed to `mirrexdev` for consistency
+
+### Fixed
+
+- Fixed extension ID in restart command
+- Improved context handling for extension lifecycle
+
 ## [1.0.0] - 2025-01-14
 
 ### Added

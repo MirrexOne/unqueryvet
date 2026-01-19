@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run compile:*)",
+      "Bash(npx @vscode/vsce package)",
+      "Bash(npm install:*)",
+      "Bash(node convert-icon.js:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(go build:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File ./scripts/build-lsp.ps1 -Version \"v1.0.0\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File ./scripts/build-lsp.ps1 -Version \"v1.0.0-test\")",
+      "Bash(gh release:*)",
+      "Bash(./gradlew buildPlugin:*)",
+      "Bash(done)",
+      "Bash(git add:*)"
+    ]
+  }
+}

@@ -7,12 +7,15 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 import { StatusBarManager } from "./statusBar";
+import { findOrDownloadLsp } from "./lspDownloader";
 
 let client: LanguageClient | undefined;
 let outputChannel: vscode.OutputChannel;
 let statusBar: StatusBarManager;
+let extensionContext: vscode.ExtensionContext;
 
 export async function activate(context: vscode.ExtensionContext) {
+  extensionContext = context;
   outputChannel = vscode.window.createOutputChannel("Unqueryvet");
   outputChannel.appendLine("Unqueryvet extension activating...");
 
@@ -80,17 +83,12 @@ async function startLanguageClient(
   context: vscode.ExtensionContext,
   config: vscode.WorkspaceConfiguration,
 ): Promise<void> {
-  // Find the LSP server executable
-  let serverPath = config.get<string>("lspPath");
-
-  if (!serverPath) {
-    // Try to find in PATH or common locations
-    serverPath = await findLspServer();
-  }
+  // Find or download the LSP server executable
+  const serverPath = await findOrDownloadLsp(context, config, outputChannel);
 
   if (!serverPath) {
     throw new Error(
-      "unqueryvet-lsp not found. Please install it or set unqueryvet.lspPath",
+      "unqueryvet-lsp not available. Please install it manually or allow automatic download.",
     );
   }
 
@@ -129,47 +127,6 @@ async function startLanguageClient(
 
   await client.start();
   outputChannel.appendLine("LSP client started successfully");
-}
-
-async function findLspServer(): Promise<string | undefined> {
-  const { exec } = require("child_process");
-  const { promisify } = require("util");
-  const execAsync = promisify(exec);
-
-  // Try common names
-  const names = ["unqueryvet-lsp", "unqueryvet-lsp.exe"];
-
-  for (const name of names) {
-    try {
-      // Check if in PATH
-      const cmd = process.platform === "win32" ? "where" : "which";
-      const { stdout } = await execAsync(`${cmd} ${name}`);
-      const serverPath = stdout.trim().split("\n")[0];
-      if (serverPath) {
-        return serverPath;
-      }
-    } catch {
-      // Not found, continue
-    }
-  }
-
-  // Try GOPATH/bin
-  const gopath = process.env.GOPATH || path.join(process.env.HOME || "", "go");
-  const gopathBin = path.join(gopath, "bin", "unqueryvet-lsp");
-
-  try {
-    const fs = require("fs");
-    if (fs.existsSync(gopathBin)) {
-      return gopathBin;
-    }
-    if (fs.existsSync(gopathBin + ".exe")) {
-      return gopathBin + ".exe";
-    }
-  } catch {
-    // Not found
-  }
-
-  return undefined;
 }
 
 async function analyzeCurrentFile(): Promise<void> {
@@ -347,14 +304,10 @@ async function restartLanguageServer(): Promise<void> {
 
   const config = vscode.workspace.getConfiguration("unqueryvet");
   try {
-    // Get extension context - we need to pass it properly
-    const ext = vscode.extensions.getExtension("unqueryvet.unqueryvet");
-    if (ext) {
-      await startLanguageClient(ext.extensionUri as any, config);
-      vscode.window.showInformationMessage(
-        "Unqueryvet: Language server restarted",
-      );
-    }
+    await startLanguageClient(extensionContext, config);
+    vscode.window.showInformationMessage(
+      "Unqueryvet: Language server restarted",
+    );
   } catch (error) {
     statusBar.setError("Restart failed");
     vscode.window.showErrorMessage(`Failed to restart: ${error}`);

@@ -60,6 +60,33 @@ tasks:
       - task: build
       - task: build:lsp
 
+  build:lsp:all:
+    desc: Build LSP server for all platforms (cross-compile)
+    cmds:
+      - echo "Building LSP for all platforms..."
+      - |
+        if [ "$(go env GOOS)" = "windows" ]; then
+          powershell -ExecutionPolicy Bypass -File ./scripts/build-lsp.ps1 -Version "{{.VERSION}}"
+        else
+          chmod +x ./scripts/build-lsp.sh
+          ./scripts/build-lsp.sh "{{.VERSION}}"
+        fi
+      - echo "Binaries available in dist/"
+
+  build:lsp:release:
+    desc: Build LSP for all platforms with release optimizations
+    cmds:
+      - echo "Building LSP release binaries..."
+      - |
+        if [ "$(go env GOOS)" = "windows" ]; then
+          powershell -ExecutionPolicy Bypass -File ./scripts/build-lsp.ps1 -Version "{{.VERSION}}"
+        else
+          chmod +x ./scripts/build-lsp.sh
+          ./scripts/build-lsp.sh "{{.VERSION}}"
+        fi
+      - cd dist && sha256sum * > checksums.txt
+      - echo "Release binaries with checksums in dist/"
+
   install:
     desc: Install unqueryvet binary to GOPATH/bin
     cmds:
