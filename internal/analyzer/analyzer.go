@@ -392,7 +392,6 @@ func getDetailedWarningMessage(context string) string {
 	}
 }
 
-
 // IsRuleEnabledExported checks if a rule is enabled in the configuration.
 // A rule is enabled if it exists in the Rules map and its severity is not "ignore".
 func IsRuleEnabledExported(rules config.RuleSeverity, ruleID string) bool {
