@@ -16,10 +16,10 @@ import (
 
 // Server implements the Language Server Protocol for unqueryvet.
 type Server struct {
-	// reader reads JSON-RPC messages from the client
-	reader *json.Decoder
-	// writer writes JSON-RPC messages to the client
-	writer *json.Encoder
+	// reader reads JSON-RPC messages from the client (with Content-Length)
+	reader *BaseReader
+	// writer writes JSON-RPC messages to the client (with Content-Length)
+	writer *BaseWriter
 	// writerMu protects concurrent writes
 	writerMu sync.Mutex
 
@@ -62,8 +62,8 @@ func NewServer(in io.Reader, out, logger io.Writer) *Server {
 	}
 
 	return &Server{
-		reader:    json.NewDecoder(in),
-		writer:    json.NewEncoder(out),
+		reader:    NewBaseReader(in),
+		writer:    NewBaseWriter(out),
 		documents: make(map[string]*Document),
 		analyzer:  NewAnalyzerWithConfig(*cfg),
 		logger:    logger,
@@ -96,9 +96,15 @@ func (s *Server) Run(ctx context.Context) error {
 
 // handleMessage reads and processes a single JSON-RPC message.
 func (s *Server) handleMessage(ctx context.Context) error {
-	var msg protocol.Message
-	if err := s.reader.Decode(&msg); err != nil {
+	// Read message with Content-Length header
+	data, err := s.reader.Read()
+	if err != nil {
 		return err
+	}
+
+	var msg protocol.Message
+	if err := json.Unmarshal(data, &msg); err != nil {
+		return fmt.Errorf("failed to unmarshal message: %w", err)
 	}
 
 	s.log("Received: method=%s, id=%v", msg.Method, msg.ID)
@@ -127,6 +133,8 @@ func (s *Server) handleMessage(ctx context.Context) error {
 		return s.handleTextDocumentCodeAction(ctx, &msg)
 	case "textDocument/completion":
 		return s.handleTextDocumentCompletion(ctx, &msg)
+	case "textDocument/diagnostic":
+		return s.handleTextDocumentDiagnostic(ctx, &msg)
 	default:
 		// Unknown method - send error for requests, ignore notifications
 		if msg.ID != nil {
@@ -360,6 +368,34 @@ func (s *Server) handleTextDocumentCompletion(ctx context.Context, msg *protocol
 	return s.sendResult(msg.ID, items)
 }
 
+// handleTextDocumentDiagnostic handles textDocument/diagnostic request (LSP 3.17 pull diagnostics).
+func (s *Server) handleTextDocumentDiagnostic(ctx context.Context, msg *protocol.Message) error {
+	var params struct {
+		TextDocument protocol.TextDocumentIdentifier `json:"textDocument"`
+	}
+	if err := json.Unmarshal(msg.Params, &params); err != nil {
+		return err
+	}
+
+	s.documentsMu.RLock()
+	doc, ok := s.documents[params.TextDocument.URI]
+	s.documentsMu.RUnlock()
+
+	if !ok {
+		// Document not found - return empty diagnostics
+		return s.sendResult(msg.ID, map[string]interface{}{
+			"kind":  "full",
+			"items": []protocol.Diagnostic{},
+		})
+	}
+
+	diagnostics := s.analyzer.Analyze(doc)
+	return s.sendResult(msg.ID, map[string]interface{}{
+		"kind":  "full",
+		"items": diagnostics,
+	})
+}
+
 // analyzeAndPublishDiagnostics analyzes a document and publishes diagnostics.
 func (s *Server) analyzeAndPublishDiagnostics(ctx context.Context, doc *Document) error {
 	diagnostics := s.analyzer.Analyze(doc)
@@ -416,7 +452,7 @@ func (s *Server) sendNotification(method string, params interface{}) error {
 func (s *Server) send(msg interface{}) error {
 	s.writerMu.Lock()
 	defer s.writerMu.Unlock()
-	return s.writer.Encode(msg)
+	return s.writer.WriteJSON(msg)
 }
 
 // log writes a debug message to the logger.

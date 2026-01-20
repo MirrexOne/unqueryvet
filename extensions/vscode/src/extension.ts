@@ -83,7 +83,10 @@ async function startLanguageClient(
   context: vscode.ExtensionContext,
   config: vscode.WorkspaceConfiguration,
 ): Promise<void> {
+  outputChannel.appendLine("Starting language client...");
+
   // Find or download the LSP server executable
+  outputChannel.appendLine("Looking for LSP server...");
   const serverPath = await findOrDownloadLsp(context, config, outputChannel);
 
   if (!serverPath) {
@@ -125,8 +128,14 @@ async function startLanguageClient(
     clientOptions,
   );
 
-  await client.start();
-  outputChannel.appendLine("LSP client started successfully");
+  outputChannel.appendLine("Starting LSP client connection...");
+  try {
+    await client.start();
+    outputChannel.appendLine("LSP client started successfully");
+  } catch (error) {
+    outputChannel.appendLine(`Failed to start LSP client: ${error}`);
+    throw error;
+  }
 }
 
 async function analyzeCurrentFile(): Promise<void> {

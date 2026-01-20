@@ -23,27 +23,27 @@ func TestPGXChecker_IsApplicable(t *testing.T) {
 		{
 			name:     "Query method",
 			code:     `package test; func f() { conn.Query(ctx, "SELECT *") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "QueryRow method",
 			code:     `package test; func f() { conn.QueryRow(ctx, "SELECT *") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "QueryFunc method",
 			code:     `package test; func f() { conn.QueryFunc(ctx, "SELECT *", nil, nil) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Exec method",
 			code:     `package test; func f() { conn.Exec(ctx, "SELECT *") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Prepare method",
 			code:     `package test; func f() { conn.Prepare(ctx, "stmt", "SELECT *") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "non-pgx method",
@@ -65,7 +65,7 @@ func TestPGXChecker_IsApplicable(t *testing.T) {
 			var result bool
 			ast.Inspect(f, func(n ast.Node) bool {
 				if call, ok := n.(*ast.CallExpr); ok {
-					result = checker.IsApplicable(call)
+					result = checker.IsApplicable(nil, call)
 					return false
 				}
 				return true

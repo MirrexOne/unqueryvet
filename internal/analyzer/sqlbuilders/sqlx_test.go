@@ -23,37 +23,37 @@ func TestSQLxChecker_IsApplicable(t *testing.T) {
 		{
 			name:     "Select method",
 			code:     `package test; func f() { db.Select(&dest, "query") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Get method",
 			code:     `package test; func f() { db.Get(&dest, "query") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Queryx method",
 			code:     `package test; func f() { db.Queryx("query") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "QueryRowx method",
 			code:     `package test; func f() { db.QueryRowx("query") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "NamedQuery method",
 			code:     `package test; func f() { db.NamedQuery("query", arg) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "NamedExec method",
 			code:     `package test; func f() { db.NamedExec("query", arg) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "MustExec method",
 			code:     `package test; func f() { db.MustExec("query") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "non-sqlx method",
@@ -75,7 +75,7 @@ func TestSQLxChecker_IsApplicable(t *testing.T) {
 			var result bool
 			ast.Inspect(f, func(n ast.Node) bool {
 				if call, ok := n.(*ast.CallExpr); ok {
-					result = checker.IsApplicable(call)
+					result = checker.IsApplicable(nil, call)
 					return false
 				}
 				return true

@@ -38,6 +38,7 @@ import (
 var (
 	versionFlag = flag.Bool("version", false, "print version information and exit")
 	helpFlag    = flag.Bool("help", false, "print help message and exit")
+	stdioFlag   = flag.Bool("stdio", false, "use stdio for communication (default, for compatibility)")
 )
 
 func main() {

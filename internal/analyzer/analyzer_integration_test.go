@@ -26,6 +26,29 @@ func TestAnalyzerWithSettings(t *testing.T) {
 	analysistest.Run(t, testdata, analyzer.NewAnalyzer(), "integration")
 }
 
+// TestNoFalsePositivesForCustomTypes verifies that custom types with methods like
+// All(), One(), Count() do NOT trigger false positives from SQL builder checkers.
+// This is a regression test for issue #5.
+func TestNoFalsePositivesForCustomTypes(t *testing.T) {
+	testdata := analysistest.TestData()
+
+	// falsepositive package should have NO warnings
+	// The checker should not flag custom types that happen to have methods
+	// with the same names as SQL builder methods (All, One, Count, Select, etc.)
+	analysistest.Run(t, testdata, analyzer.NewAnalyzer(), "falsepositive")
+}
+
+// TestRealSQLBoilerIsDetected verifies that REAL SQLBoiler code IS detected.
+// This is an e2e test to ensure the checker works correctly with actual SQLBoiler types.
+// Combined with TestNoFalsePositivesForCustomTypes, this proves the fix for issue #5 is complete.
+func TestRealSQLBoilerIsDetected(t *testing.T) {
+	testdata := analysistest.TestData()
+
+	// sqlboilerreal package has real SQLBoiler imports
+	// The checker SHOULD flag qm.Select("*") but NOT qm.Select("id", "name")
+	analysistest.Run(t, testdata, analyzer.NewAnalyzer(), "sqlboilerreal")
+}
+
 // TestDefaultRulesWork verifies that default rules are active
 func TestDefaultRulesWork(t *testing.T) {
 	testdata := analysistest.TestData()

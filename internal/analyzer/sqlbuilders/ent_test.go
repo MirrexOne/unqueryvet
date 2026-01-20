@@ -23,37 +23,37 @@ func TestEntChecker_IsApplicable(t *testing.T) {
 		{
 			name:     "Query method",
 			code:     `package test; func f() { client.User.Query() }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "All method",
 			code:     `package test; func f() { q.All(ctx) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Only method",
 			code:     `package test; func f() { q.Only(ctx) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "OnlyX method",
 			code:     `package test; func f() { q.OnlyX(ctx) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "First method",
 			code:     `package test; func f() { q.First(ctx) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "FirstX method",
 			code:     `package test; func f() { q.FirstX(ctx) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Select method",
 			code:     `package test; func f() { q.Select("id") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "non-ent method",
@@ -75,7 +75,7 @@ func TestEntChecker_IsApplicable(t *testing.T) {
 			var result bool
 			ast.Inspect(f, func(n ast.Node) bool {
 				if call, ok := n.(*ast.CallExpr); ok {
-					result = checker.IsApplicable(call)
+					result = checker.IsApplicable(nil, call)
 					return false
 				}
 				return true

@@ -23,32 +23,32 @@ func TestSQLBoilerChecker_IsApplicable(t *testing.T) {
 		{
 			name:     "All method",
 			code:     `package test; func f() { models.Users().All(ctx, db) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "One method",
 			code:     `package test; func f() { models.Users().One(ctx, db) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Count method",
 			code:     `package test; func f() { models.Users().Count(ctx, db) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Exists method",
 			code:     `package test; func f() { models.Users().Exists(ctx, db) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "Select method",
 			code:     `package test; func f() { qm.Select("id") }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "qm package",
 			code:     `package test; func f() { qm.Where("id = ?", 1) }`,
-			expected: true,
+			expected: false, // Without types.Info, returns false
 		},
 		{
 			name:     "non-sqlboiler method",
@@ -70,7 +70,7 @@ func TestSQLBoilerChecker_IsApplicable(t *testing.T) {
 			var result bool
 			ast.Inspect(f, func(n ast.Node) bool {
 				if call, ok := n.(*ast.CallExpr); ok {
-					result = checker.IsApplicable(call)
+					result = checker.IsApplicable(nil, call)
 					return false
 				}
 				return true
@@ -162,10 +162,12 @@ func TestSQLBoilerChecker_CheckChainedCalls(t *testing.T) {
 			minViolationCount: 1,
 		},
 		{
-			name:              "model with qm.Select star",
+			// Note: qm.Select("*") is detected by CheckSelectStar, not CheckChainedCalls
+			// CheckChainedCalls only detects model().All() without any Select
+			name:              "model with qm.Select star - detected by CheckSelectStar not CheckChainedCalls",
 			code:              `package test; func f() { models.Users(qm.Select("*")).All(ctx, db) }`,
-			expectViolations:  true,
-			minViolationCount: 1,
+			expectViolations:  false, // hasSelect=true, so no implicit SELECT * violation
+			minViolationCount: 0,
 		},
 		{
 			name:              "model with qm.Select explicit columns",
