@@ -2,7 +2,7 @@
   "name": "unqueryvet",
   "displayName": "Unqueryvet - SQL Linter for Go",
   "description": "Detect SELECT *, N+1 queries, and SQL injection vulnerabilities in Go projects",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "publisher": "mirrexdev",
   "icon": "icon.png",
   "engines": {

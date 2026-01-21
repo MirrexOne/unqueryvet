@@ -2,7 +2,7 @@
 
 All notable changes to the Unqueryvet VS Code extension will be documented in this file.
 
-## [1.5.2] - 2025-01-21
+## [1.5.3] - 2025-01-21
 
 ### Added
 

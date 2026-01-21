@@ -9,7 +9,7 @@ import (
 // Build information. Populated at build-time via ldflags.
 var (
 	// Version is the current version of unqueryvet.
-	Version = "1.5.2"
+	Version = "1.5.3"
 
 	// Commit is the git commit hash.
 	Commit = "dev"

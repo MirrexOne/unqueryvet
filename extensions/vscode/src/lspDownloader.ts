@@ -171,7 +171,7 @@ async function downloadFile(
  */
 export async function downloadLspServer(
   context: vscode.ExtensionContext,
-  version: string = "v1.5.2",
+  version: string = "v1.5.3",
 ): Promise<string> {
   const lspPath = getLspPath(context);
   const downloadUrl = getDownloadUrl(version);
