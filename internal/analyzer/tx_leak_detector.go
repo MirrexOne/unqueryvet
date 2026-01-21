@@ -379,11 +379,6 @@ func (d *TxLeakDetector) findBeginsRecursive(node ast.Node, depth int) {
 	})
 }
 
-// processAssignment processes an assignment statement for transaction begins.
-func (d *TxLeakDetector) processAssignment(assignStmt *ast.AssignStmt) {
-	d.processAssignmentWithDepth(assignStmt, d.scopeDepth)
-}
-
 // processAssignmentWithDepth processes an assignment with explicit depth.
 func (d *TxLeakDetector) processAssignmentWithDepth(assignStmt *ast.AssignStmt, depth int) {
 	for i, rhs := range assignStmt.Rhs {
@@ -447,14 +442,6 @@ func (d *TxLeakDetector) processAssignmentWithDepth(assignStmt *ast.AssignStmt, 
 func (d *TxLeakDetector) createTxKey(varName string, scope int, pos token.Pos) string {
 	// Use position to create unique key for shadowed variables
 	return fmt.Sprintf("%s_%d_%d", varName, scope, pos)
-}
-
-// getScopedName creates a unique name for a variable at a given scope.
-func (d *TxLeakDetector) getScopedName(varName string, scope int) string {
-	if scope == 0 {
-		return varName
-	}
-	return varName // For simplicity, we use the same name but track scope in TxState
 }
 
 // isBeginCall checks if a call expression is a transaction Begin method.
@@ -1621,21 +1608,6 @@ func (d *TxLeakDetector) generateViolations() []TxLeakViolation {
 	}
 
 	return violations
-}
-
-// isTxRelatedName checks if a function/method name suggests it handles transactions.
-func isTxRelatedName(name string) bool {
-	lower := strings.ToLower(name)
-	patterns := []string{
-		"commit", "rollback", "transaction", "tx",
-		"begin", "end", "close", "finish", "complete",
-	}
-	for _, p := range patterns {
-		if strings.Contains(lower, p) {
-			return true
-		}
-	}
-	return false
 }
 
 // AnalyzeTxLeaks is a convenience function to run transaction leak detection on a file.

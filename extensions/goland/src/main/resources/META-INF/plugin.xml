@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>dev.unqueryvet</id>
     <name>Unqueryvet - SQL Query Linter</name>
-    <version>1.5.1</version>
+    <version>1.5.2</version>
     <vendor
         email="mirrexone@gmail.com"
         url="https://github.com/MirrexOne/unqueryvet"
@@ -23,6 +23,12 @@
 
     <change-notes
     ><![CDATA[
+        <h3>1.5.2</h3>
+        <ul>
+            <li>Added transaction leak detection (tx-leak)</li>
+            <li>17 violation types for unclosed transactions</li>
+            <li>Improved documentation</li>
+        </ul>
         <h3>1.5.1</h3>
         <ul>
             <li>Synchronized version with main project</li>

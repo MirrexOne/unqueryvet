@@ -2,6 +2,19 @@
 
 All notable changes to the Unqueryvet VS Code extension will be documented in this file.
 
+## [1.5.2] - 2025-01-21
+
+### Added
+
+- **Transaction leak detection (tx-leak)** - Detects unclosed SQL transactions
+- **17 violation types** - Comprehensive detection patterns for transaction issues
+- **Support for multiple Begin methods** - database/sql, sqlx, pgx, bun, ent
+
+### Changed
+
+- Improved README documentation
+- Updated GitHub Actions example
+
 ## [1.5.1] - 2025-01-19
 
 ### Added

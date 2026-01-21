@@ -118,13 +118,14 @@ async function downloadFile(
         }
 
         if (response.statusCode !== 200) {
-          reject(
-            new Error(`Failed to download: HTTP ${response.statusCode}`),
-          );
+          reject(new Error(`Failed to download: HTTP ${response.statusCode}`));
           return;
         }
 
-        const totalSize = parseInt(response.headers["content-length"] || "0", 10);
+        const totalSize = parseInt(
+          response.headers["content-length"] || "0",
+          10,
+        );
         let downloadedSize = 0;
 
         // Report progress
@@ -170,7 +171,7 @@ async function downloadFile(
  */
 export async function downloadLspServer(
   context: vscode.ExtensionContext,
-  version: string = "v1.5.1",
+  version: string = "v1.5.2",
 ): Promise<string> {
   const lspPath = getLspPath(context);
   const downloadUrl = getDownloadUrl(version);
@@ -258,14 +259,12 @@ export async function findOrDownloadLsp(
       );
       return downloadedPath;
     } catch (error) {
-      vscode.window.showErrorMessage(
-        `Failed to download LSP server: ${error}`,
-      );
+      vscode.window.showErrorMessage(`Failed to download LSP server: ${error}`);
       return undefined;
     }
   } else if (choice === "Install Manually") {
     vscode.window.showInformationMessage(
-      'Install unqueryvet-lsp manually: go install github.com/MirrexOne/unqueryvet/cmd/unqueryvet-lsp@latest',
+      "Install unqueryvet-lsp manually: go install github.com/MirrexOne/unqueryvet/cmd/unqueryvet-lsp@latest",
     );
     return undefined;
   }
