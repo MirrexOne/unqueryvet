@@ -29,21 +29,6 @@
             <li>17 violation types for unclosed transactions</li>
             <li>Improved documentation</li>
         </ul>
-        <h3>1.5.1</h3>
-        <ul>
-            <li>Synchronized version with main project</li>
-            <li>Improved stability and bug fixes</li>
-        </ul>
-        <h3>1.0.0</h3>
-        <ul>
-            <li>Initial release</li>
-            <li>SELECT * detection in raw SQL, string concatenation, format strings, and 12 SQL builders</li>
-            <li>Aliased wildcards (t.*) and subquery detection</li>
-            <li>N+1 query detection in loops</li>
-            <li>SQL injection vulnerability scanning</li>
-            <li>Quick fix suggestions</li>
-            <li>Custom rules via DSL configuration</li>
-        </ul>
     ]]></change-notes>
 
     <depends>com.intellij.modules.platform</depends>
