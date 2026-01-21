@@ -3,16 +3,16 @@ name: Publish GoLand Plugin
 on:
   push:
     tags:
-      - 'goland-v*'  # Trigger on tags like goland-v1.0.1
+      - "goland-v*" # Trigger on tags like goland-v1.0.1
   workflow_dispatch:
     inputs:
       version:
-        description: 'Plugin version (e.g., 1.0.1)'
+        description: "Plugin version (e.g., 1.0.1)"
         required: true
       channel:
-        description: 'Release channel'
+        description: "Release channel"
         required: false
-        default: 'default'
+        default: "default"
         type: choice
         options:
           - default
@@ -20,6 +20,9 @@ on:
 
 env:
   PLUGIN_DIR: extensions/goland
+
+permissions:
+  contents: write
 
 jobs:
   publish:
@@ -46,8 +49,8 @@ jobs:
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: "temurin"
+          java-version: "17"
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -94,7 +97,7 @@ jobs:
           generate_release_notes: true
           body: |
             ## unqueryvet GoLand Plugin v${{ env.PLUGIN_VERSION }}
-            
+
             ### Installation
             - **Marketplace**: Settings → Plugins → Marketplace → Search "unqueryvet"
             - **Manual**: Download zip below → Settings → Plugins → ⚙️ → Install from Disk
