@@ -2,6 +2,8 @@ package dsl
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/expr-lang/expr"
 	"github.com/expr-lang/expr/vm"
@@ -115,7 +117,7 @@ func (e *Evaluator) evaluateRule(rule *CompiledRule, ctx *EvalContext, query str
 // evaluateCondition evaluates a compiled condition expression.
 func (e *Evaluator) evaluateCondition(program *vm.Program, ctx *EvalContext) (bool, error) {
 	// Create environment with context and built-in functions
-	env := map[string]interface{}{
+	env := map[string]any{
 		// File context
 		"file":     ctx.File,
 		"package":  ctx.Package,
@@ -140,9 +142,7 @@ func (e *Evaluator) evaluateCondition(program *vm.Program, ctx *EvalContext) (bo
 	}
 
 	// Add built-in functions
-	for name, fn := range BuiltinFunctions {
-		env[name] = fn
-	}
+	maps.Copy(env, BuiltinFunctions)
 
 	result, err := expr.Run(program, env)
 	if err != nil {
@@ -211,12 +211,7 @@ func GetBuiltinRules() []string {
 
 // IsBuiltinRule checks if a rule ID is a built-in rule.
 func IsBuiltinRule(id string) bool {
-	for _, builtin := range GetBuiltinRules() {
-		if id == builtin {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(GetBuiltinRules(), id)
 }
 
 // GetRuleSeverity returns the severity for a rule from config.

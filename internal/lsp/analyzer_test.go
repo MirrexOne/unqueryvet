@@ -269,8 +269,7 @@ func getOrders(db *sql.DB) error {
 `,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		analyzer.Analyze(doc)
 	}
 }

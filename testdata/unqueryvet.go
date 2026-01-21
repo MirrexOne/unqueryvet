@@ -4,8 +4,6 @@ package testdata
 import (
 	"database/sql"
 	"fmt"
-	"log"
-	"os"
 )
 
 // Basic SELECT * detection in string literals

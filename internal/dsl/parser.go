@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 
@@ -116,9 +117,7 @@ func (p *Parser) MergeConfigs(configs ...*Config) *Config {
 		}
 
 		// Merge rules
-		for k, v := range cfg.Rules {
-			result.Rules[k] = v
-		}
+		maps.Copy(result.Rules, cfg.Rules)
 
 		// Append ignore patterns
 		result.Ignore = append(result.Ignore, cfg.Ignore...)

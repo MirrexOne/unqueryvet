@@ -383,14 +383,14 @@ func (s *Server) handleTextDocumentDiagnostic(ctx context.Context, msg *protocol
 
 	if !ok {
 		// Document not found - return empty diagnostics
-		return s.sendResult(msg.ID, map[string]interface{}{
+		return s.sendResult(msg.ID, map[string]any{
 			"kind":  "full",
 			"items": []protocol.Diagnostic{},
 		})
 	}
 
 	diagnostics := s.analyzer.Analyze(doc)
-	return s.sendResult(msg.ID, map[string]interface{}{
+	return s.sendResult(msg.ID, map[string]any{
 		"kind":  "full",
 		"items": diagnostics,
 	})
@@ -412,7 +412,7 @@ func (s *Server) publishDiagnostics(uri string, diagnostics []protocol.Diagnosti
 }
 
 // sendResult sends a successful response.
-func (s *Server) sendResult(id, result interface{}) error {
+func (s *Server) sendResult(id, result any) error {
 	resp := protocol.Response{
 		JSONRPC: "2.0",
 		ID:      id,
@@ -422,7 +422,7 @@ func (s *Server) sendResult(id, result interface{}) error {
 }
 
 // sendError sends an error response.
-func (s *Server) sendError(id interface{}, code int, message string) error {
+func (s *Server) sendError(id any, code int, message string) error {
 	resp := protocol.Response{
 		JSONRPC: "2.0",
 		ID:      id,
@@ -435,7 +435,7 @@ func (s *Server) sendError(id interface{}, code int, message string) error {
 }
 
 // sendNotification sends a notification to the client.
-func (s *Server) sendNotification(method string, params interface{}) error {
+func (s *Server) sendNotification(method string, params any) error {
 	paramsJSON, err := json.Marshal(params)
 	if err != nil {
 		return err
@@ -449,14 +449,14 @@ func (s *Server) sendNotification(method string, params interface{}) error {
 }
 
 // send writes a message to the client.
-func (s *Server) send(msg interface{}) error {
+func (s *Server) send(msg any) error {
 	s.writerMu.Lock()
 	defer s.writerMu.Unlock()
 	return s.writer.WriteJSON(msg)
 }
 
 // log writes a debug message to the logger.
-func (s *Server) log(format string, args ...interface{}) {
+func (s *Server) log(format string, args ...any) {
 	if s.logger != nil {
 		fmt.Fprintf(s.logger, "[unqueryvet-lsp] "+format+"\n", args...)
 	}

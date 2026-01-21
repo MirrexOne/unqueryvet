@@ -171,7 +171,7 @@ func Run(analyzer *analysis.Analyzer, output *cli.Output, showStats bool) ExitCo
 			Pkg:          pkg.Types,
 			TypesInfo:    pkg.TypesInfo,
 			TypesSizes:   pkg.TypesSizes,
-			ResultOf:     make(map[*analysis.Analyzer]interface{}),
+			ResultOf:     make(map[*analysis.Analyzer]any),
 			Report: func(d analysis.Diagnostic) {
 				// Determine severity (for now, treat all as warnings)
 				severity := "warning"

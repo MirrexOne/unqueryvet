@@ -37,8 +37,8 @@ func (r *BaseReader) Read() ([]byte, error) {
 		}
 
 		// Parse Content-Length header
-		if strings.HasPrefix(line, "Content-Length:") {
-			value := strings.TrimSpace(strings.TrimPrefix(line, "Content-Length:"))
+		if after, ok := strings.CutPrefix(line, "Content-Length:"); ok {
+			value := strings.TrimSpace(after)
 			contentLength, err = strconv.Atoi(value)
 			if err != nil {
 				return nil, fmt.Errorf("invalid Content-Length: %v", err)
@@ -83,7 +83,7 @@ func (w *BaseWriter) Write(data []byte) error {
 }
 
 // WriteJSON marshals and writes a JSON message with Content-Length header.
-func (w *BaseWriter) WriteJSON(v interface{}) error {
+func (w *BaseWriter) WriteJSON(v any) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err

@@ -355,5 +355,174 @@ func insertUser(tx *sql.Tx) error {
 	return err
 }
 
+// ============================================================================
+// NEW FALSE NEGATIVE SCENARIOS (should be detected as problems)
+// ============================================================================
+
+// entOrmLeaky - CRITICAL: Ent ORM Tx() without Commit/Rollback
+func entOrmLeaky(ctx context.Context, client interface {
+	Tx(context.Context) (interface {
+		Commit() error
+		Rollback() error
+	}, error)
+}) error {
+	tx, err := client.Tx(ctx) // want "unclosed transaction: tx"
+	if err != nil {
+		return err
+	}
+	_ = tx
+	return nil
+}
+
+// storedInStructNoDefer - CRITICAL: tx stored in struct without defer
+type ServiceNoDefer struct {
+	tx *sql.Tx
+}
+
+func (s *ServiceNoDefer) startTx(db *sql.DB) error {
+	tx, err := db.Begin() // want "unclosed transaction: tx"
+	if err != nil {
+		return err
+	}
+	s.tx = tx // Stored in struct, no defer - dangerous!
+	return nil
+}
+
+// rollbackInGoroutineOnly - HIGH: Defer only in goroutine, not main function
+func rollbackInGoroutineOnly(db *sql.DB) {
+	tx, err := db.Begin() // want "captured by goroutine"
+	if err != nil {
+		return
+	}
+	// No defer in main function!
+
+	go func() {
+		defer tx.Rollback() // Defer is in goroutine, not safe
+		_, _ = tx.Exec("INSERT INTO users (name) VALUES ('test')")
+		_ = tx.Commit()
+	}()
+	// Main function returns immediately
+}
+
+// commitInForLoop - MEDIUM: Commit inside for loop
+func commitInForLoop(db *sql.DB, count int) error {
+	tx, err := db.Begin() // want "Commit\\(\\) is inside loop"
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < count; i++ {
+		_, err = tx.Exec("INSERT INTO users (id) VALUES (?)", i)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
+		return tx.Commit() // Commit inside for loop - may never run if count=0
+	}
+	return nil
+}
+
+// ============================================================================
+// NEW FALSE POSITIVE SCENARIOS (should NOT be flagged)
+// ============================================================================
+
+// deferWithTxParameter - GOOD: Defer with tx passed to cleanup function
+func cleanup(tx *sql.Tx) {
+	tx.Rollback()
+}
+
+func deferWithTxParameter(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer cleanup(tx) // Defer calls cleanup(tx) which does Rollback
+
+	_, err = tx.Exec("INSERT INTO users (name) VALUES ('test')")
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// deferBeforeBegin - GOOD: Defer declared before Begin
+func deferBeforeBegin(db *sql.DB) error {
+	var tx *sql.Tx
+	var err error
+	defer func() {
+		if tx != nil {
+			tx.Rollback()
+		}
+	}()
+
+	tx, err = db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("INSERT INTO users (name) VALUES ('test')")
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// entOrmProper - GOOD: Ent ORM with proper handling
+func entOrmProper(ctx context.Context, client interface {
+	Tx(context.Context) (interface {
+		Commit() error
+		Rollback() error
+	}, error)
+}) error {
+	tx, err := client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// ... do work ...
+	return tx.Commit()
+}
+
+// multiplePathsDifferentTxProper - GOOD: Multiple return paths, each properly handled
+func multiplePathsDifferentTxProper(db *sql.DB, flag bool) error {
+	if flag {
+		tx1, err := db.Begin()
+		if err != nil {
+			return err
+		}
+		defer tx1.Rollback()
+		return tx1.Commit()
+	} else {
+		tx2, err := db.Begin()
+		if err != nil {
+			return err
+		}
+		defer tx2.Rollback()
+		return tx2.Commit()
+	}
+}
+
+// bothPathsCovered - GOOD: Both commit and rollback paths covered
+func bothPathsCovered(db *sql.DB, success bool) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("INSERT INTO users (name) VALUES ('test')")
+	if err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if success {
+		return tx.Commit()
+	} else {
+		tx.Rollback()
+		return nil
+	}
+}
+
 // Unused variable to prevent import errors
 var _ = context.Background

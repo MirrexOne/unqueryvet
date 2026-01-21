@@ -95,7 +95,7 @@ func containsCountPattern(patterns []string) bool {
 func BenchmarkUnqueryvet(b *testing.B) {
 	testdata := analysistest.TestData()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		analysistest.Run(b, testdata, unqueryvet.Analyzer, "testdata")
 	}
 }

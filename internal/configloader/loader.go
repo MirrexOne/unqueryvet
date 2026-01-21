@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"gopkg.in/yaml.v3"
 
@@ -108,10 +109,8 @@ func ValidateConfig(cfg *config.UnqueryvetSettings) error {
 	}
 
 	// Validate allowed patterns (compile as regex)
-	for _, pattern := range cfg.AllowedPatterns {
-		if pattern == "" {
-			return fmt.Errorf("empty pattern in allowed-patterns")
-		}
+	if slices.Contains(cfg.AllowedPatterns, "") {
+		return fmt.Errorf("empty pattern in allowed-patterns")
 	}
 
 	return nil

@@ -38,10 +38,14 @@ type TxState struct {
 	HasCommit             bool
 	HasRollback           bool
 	HasDefer              bool      // Rollback/Commit in defer
+	HasDeferredCommit     bool      // Commit() is in defer - antipattern
 	IsReturned            bool      // Transaction returned to caller
+	IsReturnedInClosure   bool      // Transaction captured by returned closure
 	IsCallback            bool      // Transaction used in callback pattern
 	IsPassedToFunc        bool      // Transaction passed to another function
+	IsSentToChannel       bool      // Transaction sent through channel (ch <- tx)
 	IsStoredInStruct      bool      // Transaction stored in struct field
+	IsStoredInCollection  bool      // Transaction stored in map or slice
 	IsCapturedByGoroutine bool      // Transaction captured by goroutine
 	IsShadowed            bool      // Variable is shadowed in inner scope
 	ShadowedBy            token.Pos // Position where shadowing occurs
@@ -54,6 +58,8 @@ type TxState struct {
 	CommitInLoop          bool      // Commit is inside loop that might not iterate
 	IsReassigned          bool      // Transaction variable is reassigned
 	CommitErrorIgnored    bool      // Commit() error is ignored with blank identifier
+	RollbackErrorIgnored  bool      // Rollback() error is ignored with blank identifier
+	HasDeferInLoop        bool      // Transaction has defer inside a loop (antipattern)
 	Scope                 int       // Scope depth where transaction was created
 }
 
@@ -91,6 +97,8 @@ func NewTxLeakDetector() *TxLeakDetector {
 			"BeginFunc": true, // callback pattern - also in callbackMethods
 			// bun
 			"RunInTx": true, // callback pattern - also in callbackMethods
+			// ent ORM
+			"Tx": true,
 			// General
 			"NewTx": true,
 		},
@@ -105,6 +113,7 @@ func NewTxLeakDetector() *TxLeakDetector {
 			"Transaction":      true,
 			"RunInTransaction": true,
 			"BeginFunc":        true,
+			"BeginTxFunc":      true, // pgx conn.BeginTxFunc
 			"RunInTx":          true,
 			"WithTx":           true,
 			"InTransaction":    true,
@@ -275,6 +284,9 @@ func (d *TxLeakDetector) analyzeFunction(funcDecl *ast.FuncDecl) []TxLeakViolati
 	// Phase 6: Check for transactions stored in struct fields
 	d.checkStructFieldStorage(funcDecl)
 
+	// Phase 6.5: Check for transactions sent through channels
+	d.checkChannelSend(funcDecl)
+
 	// Phase 7: Check for goroutine captures
 	d.checkGoroutineCaptures(funcDecl)
 
@@ -305,7 +317,13 @@ func (d *TxLeakDetector) analyzeFunction(funcDecl *ast.FuncDecl) []TxLeakViolati
 	// Phase 16: Check for ignored commit errors
 	d.checkCommitErrorIgnored(funcDecl)
 
-	// Phase 17: Generate violations
+	// Phase 17: Check for ignored rollback errors
+	d.checkRollbackErrorIgnored(funcDecl)
+
+	// Phase 18: Check for defer inside loop (antipattern)
+	d.checkDeferInLoop(funcDecl)
+
+	// Phase 19: Generate violations
 	return d.generateViolations()
 }
 
@@ -504,6 +522,11 @@ func (d *TxLeakDetector) markAllStatesWithName(varName string, fn func(*TxState)
 func (d *TxLeakDetector) trackCommitRollback(funcDecl *ast.FuncDecl) {
 	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
 		switch node := n.(type) {
+		case *ast.GoStmt:
+			// Skip goroutines - defers inside goroutines don't protect the main function
+			// We track goroutine captures separately in checkGoroutineCaptures
+			return false
+
 		case *ast.DeferStmt:
 			// Check defer statements
 			d.checkDeferStatement(node)
@@ -527,6 +550,32 @@ func (d *TxLeakDetector) checkDeferStatement(deferStmt *ast.DeferStmt) {
 	// Check for defer func() { ... }()
 	if funcLit, ok := call.Fun.(*ast.FuncLit); ok {
 		d.checkDeferredClosure(funcLit)
+	}
+
+	// Check for defer someFunc(tx) - function call with tx as argument
+	d.checkDeferredFunctionCall(call)
+}
+
+// checkDeferredFunctionCall checks if a deferred function call takes a transaction as argument.
+// This handles patterns like: defer cleanup(tx) where cleanup() might do Rollback.
+func (d *TxLeakDetector) checkDeferredFunctionCall(call *ast.CallExpr) {
+	// Check each argument to see if it's a tracked transaction variable
+	for _, arg := range call.Args {
+		switch a := arg.(type) {
+		case *ast.Ident:
+			// Direct variable: defer cleanup(tx)
+			d.markAllStatesWithName(a.Name, func(s *TxState) {
+				s.HasDefer = true
+				// We assume the function handles rollback since tx is passed to deferred call
+			})
+		case *ast.UnaryExpr:
+			// Pointer: defer cleanup(&tx)
+			if ident, ok := a.X.(*ast.Ident); ok {
+				d.markAllStatesWithName(ident.Name, func(s *TxState) {
+					s.HasDefer = true
+				})
+			}
+		}
 	}
 }
 
@@ -563,6 +612,10 @@ func (d *TxLeakDetector) checkCommitRollbackCall(call *ast.CallExpr, inDefer boo
 	d.markAllStatesWithName(varName, func(state *TxState) {
 		if d.commitMethods[methodName] {
 			state.HasCommit = true
+			// Deferred commit is an antipattern
+			if inDefer {
+				state.HasDeferredCommit = true
+			}
 		}
 
 		if d.rollbackMethods[methodName] {
@@ -595,7 +648,23 @@ func (d *TxLeakDetector) checkReturnStatements(funcDecl *ast.FuncDecl) {
 						s.IsReturned = true
 					})
 				}
+			case *ast.FuncLit:
+				// Handle closure return: return func() { tx.Commit() }
+				// Check if closure captures any tracked tx variables
+				d.checkClosureCaptures(r)
 			}
+		}
+		return true
+	})
+}
+
+// checkClosureCaptures checks if a closure captures any tracked transaction variables.
+func (d *TxLeakDetector) checkClosureCaptures(funcLit *ast.FuncLit) {
+	ast.Inspect(funcLit.Body, func(inner ast.Node) bool {
+		if ident, ok := inner.(*ast.Ident); ok {
+			d.markAllStatesWithName(ident.Name, func(s *TxState) {
+				s.IsReturnedInClosure = true
+			})
 		}
 		return true
 	})
@@ -655,7 +724,64 @@ func (d *TxLeakDetector) checkStructFieldStorage(funcDecl *ast.FuncDecl) {
 					}
 				}
 			}
+
+			// Check for map/slice assignment: txMap[key] = tx or txSlice[i] = tx
+			if indexExpr, ok := lhs.(*ast.IndexExpr); ok {
+				_ = indexExpr
+				if i < len(assignStmt.Rhs) {
+					if ident, ok := assignStmt.Rhs[i].(*ast.Ident); ok {
+						d.markAllStatesWithName(ident.Name, func(s *TxState) {
+							s.IsStoredInCollection = true
+						})
+					}
+				}
+			}
 		}
+
+		// Check for append: txSlice = append(txSlice, tx)
+		for _, rhs := range assignStmt.Rhs {
+			if call, ok := rhs.(*ast.CallExpr); ok {
+				if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == "append" {
+					// Check arguments after the first one
+					for j := 1; j < len(call.Args); j++ {
+						if argIdent, ok := call.Args[j].(*ast.Ident); ok {
+							d.markAllStatesWithName(argIdent.Name, func(s *TxState) {
+								s.IsStoredInCollection = true
+							})
+						}
+					}
+				}
+			}
+		}
+
+		return true
+	})
+}
+
+// checkChannelSend checks if transaction is sent through a channel.
+func (d *TxLeakDetector) checkChannelSend(funcDecl *ast.FuncDecl) {
+	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
+		sendStmt, ok := n.(*ast.SendStmt)
+		if !ok {
+			return true
+		}
+
+		// Check if value being sent is a tracked transaction: ch <- tx
+		if ident, ok := sendStmt.Value.(*ast.Ident); ok {
+			d.markAllStatesWithName(ident.Name, func(s *TxState) {
+				s.IsSentToChannel = true
+			})
+		}
+
+		// Also check for pointer: ch <- &tx
+		if unary, ok := sendStmt.Value.(*ast.UnaryExpr); ok {
+			if ident, ok := unary.X.(*ast.Ident); ok {
+				d.markAllStatesWithName(ident.Name, func(s *TxState) {
+					s.IsSentToChannel = true
+				})
+			}
+		}
+
 		return true
 	})
 }
@@ -1029,6 +1155,145 @@ func (d *TxLeakDetector) checkCommitErrorIgnored(funcDecl *ast.FuncDecl) {
 	})
 }
 
+// checkRollbackErrorIgnored checks if Rollback() error is ignored with blank identifier.
+func (d *TxLeakDetector) checkRollbackErrorIgnored(funcDecl *ast.FuncDecl) {
+	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
+		assignStmt, ok := n.(*ast.AssignStmt)
+		if !ok {
+			return true
+		}
+
+		// Look for: _ = tx.Rollback() or result, _ := tx.Rollback()
+		for i, rhs := range assignStmt.Rhs {
+			call, ok := rhs.(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok {
+				continue
+			}
+
+			if d.rollbackMethods[sel.Sel.Name] {
+				// Check if the error is ignored
+				// For single assignment: _ = tx.Rollback()
+				if len(assignStmt.Lhs) == 1 {
+					if ident, ok := assignStmt.Lhs[0].(*ast.Ident); ok && ident.Name == "_" {
+						if varIdent, ok := sel.X.(*ast.Ident); ok {
+							d.markAllStatesWithName(varIdent.Name, func(s *TxState) {
+								s.RollbackErrorIgnored = true
+							})
+						}
+					}
+				}
+				// For tuple assignment: result, _ := someFunc() - check if error position is _
+				if len(assignStmt.Lhs) > i+1 {
+					if ident, ok := assignStmt.Lhs[i+1].(*ast.Ident); ok && ident.Name == "_" {
+						if varIdent, ok := sel.X.(*ast.Ident); ok {
+							d.markAllStatesWithName(varIdent.Name, func(s *TxState) {
+								s.RollbackErrorIgnored = true
+							})
+						}
+					}
+				}
+			}
+		}
+		return true
+	})
+}
+
+// checkDeferInLoop checks if defer with transaction is inside a loop (antipattern).
+func (d *TxLeakDetector) checkDeferInLoop(funcDecl *ast.FuncDecl) {
+	// We need to track loop depth manually since ast.Inspect doesn't give us exit notification
+	var processNode func(n ast.Node, loopDepth int)
+	processNode = func(n ast.Node, loopDepth int) {
+		if n == nil {
+			return
+		}
+
+		switch node := n.(type) {
+		case *ast.ForStmt:
+			// Enter for loop - process body with increased depth
+			if node.Body != nil {
+				for _, stmt := range node.Body.List {
+					processNode(stmt, loopDepth+1)
+				}
+			}
+		case *ast.RangeStmt:
+			// Enter range loop - process body with increased depth
+			if node.Body != nil {
+				for _, stmt := range node.Body.List {
+					processNode(stmt, loopDepth+1)
+				}
+			}
+		case *ast.DeferStmt:
+			if loopDepth > 0 {
+				// Defer is inside a loop - check if it involves a tracked transaction
+				call := node.Call
+				if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+					if d.rollbackMethods[sel.Sel.Name] || d.commitMethods[sel.Sel.Name] {
+						if ident, ok := sel.X.(*ast.Ident); ok {
+							d.markAllStatesWithName(ident.Name, func(s *TxState) {
+								s.HasDeferInLoop = true
+							})
+						}
+					}
+				}
+				// Also check defer func() { tx.Rollback() }()
+				if funcLit, ok := call.Fun.(*ast.FuncLit); ok {
+					ast.Inspect(funcLit.Body, func(inner ast.Node) bool {
+						if innerCall, ok := inner.(*ast.CallExpr); ok {
+							if sel, ok := innerCall.Fun.(*ast.SelectorExpr); ok {
+								if d.rollbackMethods[sel.Sel.Name] || d.commitMethods[sel.Sel.Name] {
+									if ident, ok := sel.X.(*ast.Ident); ok {
+										d.markAllStatesWithName(ident.Name, func(s *TxState) {
+											s.HasDeferInLoop = true
+										})
+									}
+								}
+							}
+						}
+						return true
+					})
+				}
+			}
+		case *ast.BlockStmt:
+			for _, stmt := range node.List {
+				processNode(stmt, loopDepth)
+			}
+		case *ast.IfStmt:
+			if node.Init != nil {
+				processNode(node.Init, loopDepth)
+			}
+			processNode(node.Body, loopDepth)
+			if node.Else != nil {
+				processNode(node.Else, loopDepth)
+			}
+		case *ast.SwitchStmt:
+			processNode(node.Body, loopDepth)
+		case *ast.TypeSwitchStmt:
+			processNode(node.Body, loopDepth)
+		case *ast.SelectStmt:
+			processNode(node.Body, loopDepth)
+		case *ast.CaseClause:
+			for _, stmt := range node.Body {
+				processNode(stmt, loopDepth)
+			}
+		case *ast.CommClause:
+			for _, stmt := range node.Body {
+				processNode(stmt, loopDepth)
+			}
+		}
+	}
+
+	if funcDecl.Body != nil {
+		for _, stmt := range funcDecl.Body.List {
+			processNode(stmt, 0)
+		}
+	}
+}
+
 // checkConditionalCommits checks if Commit is inside a conditional block.
 func (d *TxLeakDetector) checkConditionalCommits(funcDecl *ast.FuncDecl) {
 	ast.Inspect(funcDecl.Body, func(n ast.Node) bool {
@@ -1088,6 +1353,16 @@ func (d *TxLeakDetector) generateViolations() []TxLeakViolation {
 			continue
 		}
 
+		// Skip if transaction is returned in a closure (lifecycle managed by caller)
+		if state.IsReturnedInClosure {
+			continue
+		}
+
+		// Skip if transaction is sent through a channel (lifecycle managed by receiver)
+		if state.IsSentToChannel {
+			continue
+		}
+
 		// Skip if using callback pattern
 		if state.IsCallback {
 			continue
@@ -1102,6 +1377,12 @@ func (d *TxLeakDetector) generateViolations() []TxLeakViolation {
 		// Skip if stored in struct (can't track field lifecycle)
 		// But warn if there's no defer as a safety net
 		if state.IsStoredInStruct && state.HasDefer {
+			continue
+		}
+
+		// Skip if stored in collection (map/slice) with defer
+		// But warn if there's no defer as a safety net
+		if state.IsStoredInCollection && state.HasDefer {
 			continue
 		}
 
@@ -1234,6 +1515,45 @@ func (d *TxLeakDetector) generateViolations() []TxLeakViolation {
 				ViolationType: "commit_error_ignored",
 				TxVarName:     state.VarName,
 				Suggestion:    "Handle the Commit() error - if it fails, the transaction is rolled back automatically",
+			})
+		}
+
+		// Handle deferred commit - antipattern
+		if state.HasDeferredCommit {
+			violations = append(violations, TxLeakViolation{
+				Pos:           state.BeginPos,
+				End:           state.BeginEnd,
+				Message:       "transaction " + state.VarName + " uses defer Commit() - this is an antipattern",
+				Severity:      TxLeakSeverityMedium,
+				ViolationType: "deferred_commit",
+				TxVarName:     state.VarName,
+				Suggestion:    "Use defer " + state.VarName + ".Rollback() and explicit Commit() at the end of the function",
+			})
+		}
+
+		// Handle ignored rollback error
+		if state.RollbackErrorIgnored {
+			violations = append(violations, TxLeakViolation{
+				Pos:           state.BeginPos,
+				End:           state.BeginEnd,
+				Message:       "transaction " + state.VarName + " Rollback() error is ignored with blank identifier",
+				Severity:      TxLeakSeverityLow,
+				ViolationType: "rollback_error_ignored",
+				TxVarName:     state.VarName,
+				Suggestion:    "Consider logging Rollback() errors for debugging - silent failures can hide issues",
+			})
+		}
+
+		// Handle defer inside loop - antipattern
+		if state.HasDeferInLoop {
+			violations = append(violations, TxLeakViolation{
+				Pos:           state.BeginPos,
+				End:           state.BeginEnd,
+				Message:       "transaction " + state.VarName + " has defer inside loop - defers pile up until function returns",
+				Severity:      TxLeakSeverityHigh,
+				ViolationType: "defer_in_loop",
+				TxVarName:     state.VarName,
+				Suggestion:    "Move transaction handling outside loop or use explicit Rollback()/Commit() in each iteration",
 			})
 		}
 

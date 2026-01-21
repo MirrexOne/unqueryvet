@@ -5,6 +5,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"slices"
 	"strings"
 )
 
@@ -66,15 +67,13 @@ func (c *JetChecker) CheckSelectStar(call *ast.CallExpr) *SelectStarViolation {
 func (c *JetChecker) checkIdentCall(call *ast.CallExpr, ident *ast.Ident) *SelectStarViolation {
 	switch ident.Name {
 	case "SELECT":
-		for _, arg := range call.Args {
-			if c.isAllColumnsOrStar(arg) {
-				return &SelectStarViolation{
-					Pos:     call.Pos(),
-					End:     call.End(),
-					Message: "Jet SELECT with AllColumns/STAR - specify columns explicitly",
-					Builder: "jet",
-					Context: "explicit_star",
-				}
+		if slices.ContainsFunc(call.Args, c.isAllColumnsOrStar) {
+			return &SelectStarViolation{
+				Pos:     call.Pos(),
+				End:     call.End(),
+				Message: "Jet SELECT with AllColumns/STAR - specify columns explicitly",
+				Builder: "jet",
+				Context: "explicit_star",
 			}
 		}
 	case "RawStatement":

@@ -50,13 +50,13 @@ func (o *Output) color(colorCode, text string) string {
 }
 
 // Error prints an error message in red.
-func (o *Output) Error(format string, args ...interface{}) {
+func (o *Output) Error(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(o.errorWriter, "%s\n", o.color(ColorRed, "ERROR: "+msg))
 }
 
 // Warning prints a warning message in yellow.
-func (o *Output) Warning(format string, args ...interface{}) {
+func (o *Output) Warning(format string, args ...any) {
 	if o.quiet {
 		return
 	}
@@ -65,7 +65,7 @@ func (o *Output) Warning(format string, args ...interface{}) {
 }
 
 // Info prints an info message.
-func (o *Output) Info(format string, args ...interface{}) {
+func (o *Output) Info(format string, args ...any) {
 	if o.quiet {
 		return
 	}
@@ -74,7 +74,7 @@ func (o *Output) Info(format string, args ...interface{}) {
 }
 
 // Success prints a success message in green.
-func (o *Output) Success(format string, args ...interface{}) {
+func (o *Output) Success(format string, args ...any) {
 	if o.quiet {
 		return
 	}
@@ -83,7 +83,7 @@ func (o *Output) Success(format string, args ...interface{}) {
 }
 
 // Debug prints a debug message (only in verbose mode).
-func (o *Output) Debug(format string, args ...interface{}) {
+func (o *Output) Debug(format string, args ...any) {
 	if o.verbose < 1 {
 		return
 	}
@@ -92,7 +92,7 @@ func (o *Output) Debug(format string, args ...interface{}) {
 }
 
 // Trace prints a trace message (only in very verbose mode).
-func (o *Output) Trace(format string, args ...interface{}) {
+func (o *Output) Trace(format string, args ...any) {
 	if o.verbose < 2 {
 		return
 	}

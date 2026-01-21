@@ -41,7 +41,7 @@ func (d *DSLAnalyzer) CreateAnalyzer() *analysis.Analyzer {
 }
 
 // run is the main analysis function.
-func (d *DSLAnalyzer) run(pass *analysis.Pass) (interface{}, error) {
+func (d *DSLAnalyzer) run(pass *analysis.Pass) (any, error) {
 	// Check if file should be ignored
 	if len(pass.Files) > 0 {
 		fileName := pass.Fset.File(pass.Files[0].Pos()).Name()

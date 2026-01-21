@@ -504,10 +504,10 @@ func (a *Analyzer) getColumnFromTag(tag *ast.BasicLit, fieldName string) string 
 			// Handle gorm's special syntax like "column:name"
 			if tagName == "gorm" {
 				if strings.Contains(value, "column:") {
-					parts := strings.Split(value, ";")
-					for _, part := range parts {
-						if strings.HasPrefix(part, "column:") {
-							return strings.TrimPrefix(part, "column:")
+					parts := strings.SplitSeq(value, ";")
+					for part := range parts {
+						if after, ok := strings.CutPrefix(part, "column:"); ok {
+							return after
 						}
 					}
 				}

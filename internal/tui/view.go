@@ -78,14 +78,8 @@ func RenderDiffPreview(original, modified string, lineNum, contextLines int) str
 	modLines := strings.Split(modified, "\n")
 
 	// Calculate context range
-	startLine := lineNum - contextLines - 1
-	if startLine < 0 {
-		startLine = 0
-	}
-	endLine := lineNum + contextLines
-	if endLine > len(origLines) {
-		endLine = len(origLines)
-	}
+	startLine := max(lineNum-contextLines-1, 0)
+	endLine := min(lineNum+contextLines, len(origLines))
 
 	// Render diff
 	b.WriteString(diffHeaderStyle.Render("--- Original"))

@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"maps"
 	"sync"
 
 	"github.com/expr-lang/expr"
@@ -86,7 +87,7 @@ func (c *Compiler) compileCondition(condition string) (*vm.Program, error) {
 	}
 
 	// Create environment with built-in functions for operator overloading
-	env := map[string]interface{}{
+	env := map[string]any{
 		// Context fields (will be filled at runtime)
 		"file":       "",
 		"package":    "",
@@ -109,9 +110,7 @@ func (c *Compiler) compileCondition(condition string) (*vm.Program, error) {
 	}
 
 	// Add all built-in functions
-	for name, fn := range BuiltinFunctions {
-		env[name] = fn
-	}
+	maps.Copy(env, BuiltinFunctions)
 
 	// Compile with the environment
 	program, err := expr.Compile(condition,

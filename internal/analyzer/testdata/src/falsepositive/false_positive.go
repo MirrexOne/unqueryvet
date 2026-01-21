@@ -117,26 +117,26 @@ func UseCustomRepo() {
 // AnotherService with similar method names
 type AnotherService struct{}
 
-func (s *AnotherService) All() []string                      { return nil }
+func (s *AnotherService) All() []string                            { return nil }
 func (s *AnotherService) Select(columns ...string) *AnotherService { return s }
-func (s *AnotherService) Find() *Item                        { return nil }
-func (s *AnotherService) First() *Item                       { return nil }
+func (s *AnotherService) Find() *Item                              { return nil }
+func (s *AnotherService) First() *Item                             { return nil }
 
 func UseAnotherService() {
 	svc := &AnotherService{}
 
 	// These should NOT trigger warnings - they're not GORM/SQLBoiler/etc
-	_ = svc.All()              // OK - not SQLBoiler
+	_ = svc.All()                // OK - not SQLBoiler
 	_ = svc.Select("id", "name") // OK - not Squirrel/GORM
-	_ = svc.Find()             // OK - not GORM
-	_ = svc.First()            // OK - not GORM
+	_ = svc.Find()               // OK - not GORM
+	_ = svc.First()              // OK - not GORM
 }
 
 // DB-like struct but not from any SQL library
 type FakeDB struct{}
 
-func (d *FakeDB) Query(sql string) {}
-func (d *FakeDB) Select(cols ...string) *FakeDB { return d }
+func (d *FakeDB) Query(sql string)               {}
+func (d *FakeDB) Select(cols ...string) *FakeDB  { return d }
 func (d *FakeDB) Columns(cols ...string) *FakeDB { return d }
 func (d *FakeDB) Column(col string) *FakeDB      { return d }
 
@@ -145,15 +145,15 @@ func UseFakeDB() {
 
 	// These should NOT trigger warnings
 	db.Query("SELECT id, name FROM users") // OK - not real DB
-	db.Select("*")                          // OK - not real GORM/Squirrel
+	db.Select("*")                         // OK - not real GORM/Squirrel
 }
 
 // FakeBuilder mimics SQL builder patterns but is NOT from any SQL library
 type FakeBuilder struct{}
 
-func (b *FakeBuilder) Select(cols ...string) *FakeBuilder { return b }
+func (b *FakeBuilder) Select(cols ...string) *FakeBuilder  { return b }
 func (b *FakeBuilder) Columns(cols ...string) *FakeBuilder { return b }
-func (b *FakeBuilder) From(table string) *FakeBuilder     { return b }
+func (b *FakeBuilder) From(table string) *FakeBuilder      { return b }
 
 func UseFakeBuilder() {
 	// This pattern should NOT trigger warnings - it's not a real SQL builder

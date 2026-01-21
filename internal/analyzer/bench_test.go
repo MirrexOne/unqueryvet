@@ -96,8 +96,7 @@ func BenchmarkFullAnalysisWorkflow(b *testing.B) {
 		`"INSERT INTO logs (message) VALUES ('test')"`,
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, query := range queries {
 			normalized := normalizeSQLQuery(query)
 			_ = isSelectStarQuery(normalized, cfg)
@@ -127,8 +126,7 @@ func BenchmarkRegexPatterns(b *testing.B) {
 		"SELECT MAX(*) FROM scores",
 	}
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		for _, query := range queries {
 			_ = isSelectStarQuery(query, cfg)
 		}

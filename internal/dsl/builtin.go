@@ -7,7 +7,7 @@ import (
 
 // BuiltinFunctions provides functions available in DSL conditions.
 // These are registered with expr-lang for use in "when" expressions.
-var BuiltinFunctions = map[string]interface{}{
+var BuiltinFunctions = map[string]any{
 	// String functions
 	"contains":   strings.Contains,
 	"hasPrefix":  strings.HasPrefix,
@@ -109,13 +109,13 @@ func isTempTable(table string) bool {
 }
 
 // length returns the length of a string or slice.
-func length(v interface{}) int {
+func length(v any) int {
 	switch val := v.(type) {
 	case string:
 		return len(val)
 	case []string:
 		return len(val)
-	case []interface{}:
+	case []any:
 		return len(val)
 	default:
 		return 0
@@ -218,9 +218,9 @@ func ExtractTableNames(query string) []string {
 	var tables []string
 
 	// Find tables after FROM
-	fromIdx := strings.Index(query, " FROM ")
-	if fromIdx >= 0 {
-		afterFrom := query[fromIdx+6:]
+	_, after, ok := strings.Cut(query, " FROM ")
+	if ok {
+		afterFrom := after
 		// Take until WHERE, JOIN, ORDER, GROUP, etc.
 		for _, keyword := range []string{" WHERE ", " JOIN ", " ORDER ", " GROUP ", " LIMIT ", " HAVING ", ";"} {
 			if idx := strings.Index(afterFrom, keyword); idx >= 0 {
@@ -228,8 +228,8 @@ func ExtractTableNames(query string) []string {
 			}
 		}
 		// Split by comma and clean up
-		parts := strings.Split(afterFrom, ",")
-		for _, part := range parts {
+		parts := strings.SplitSeq(afterFrom, ",")
+		for part := range parts {
 			part = strings.TrimSpace(part)
 			// Remove alias
 			if spaceIdx := strings.Index(part, " "); spaceIdx >= 0 {
