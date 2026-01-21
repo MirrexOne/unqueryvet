@@ -580,8 +580,8 @@ func TestDefaultSettingsAllFieldsInitialized(t *testing.T) {
 	if defaults.Rules == nil {
 		t.Error("Rules should not be nil")
 	}
-	if len(defaults.Rules) != 3 {
-		t.Errorf("Rules should have 3 entries, got %d", len(defaults.Rules))
+	if len(defaults.Rules) != 4 {
+		t.Errorf("Rules should have 4 entries, got %d", len(defaults.Rules))
 	}
 
 	// Check SQLBuilders config

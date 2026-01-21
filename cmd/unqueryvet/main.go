@@ -21,6 +21,7 @@ var (
 	noColorFlag = flag.Bool("no-color", false, "disable colored output")
 	n1Flag      = flag.Bool("n1", false, "detect potential N+1 query problems")
 	sqliFlag    = flag.Bool("sqli", false, "detect potential SQL injection vulnerabilities")
+	txLeakFlag  = flag.Bool("tx-leak", false, "detect unclosed SQL transactions")
 	fixFlag     = flag.Bool("fix", false, "interactive fix mode - step through issues and apply fixes")
 )
 
@@ -61,6 +62,7 @@ func main() {
 
 	settings.N1DetectionEnabled = *n1Flag
 	settings.SQLInjectionDetectionEnabled = *sqliFlag
+	settings.TxLeakDetectionEnabled = *txLeakFlag
 
 	// Run the analyzer with our custom runner
 	analyzer := internal.NewAnalyzerWithSettings(settings)

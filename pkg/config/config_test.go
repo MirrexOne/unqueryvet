@@ -85,15 +85,15 @@ func TestDefaultRules(t *testing.T) {
 		}
 	})
 
-	t.Run("all three default rules are present", func(t *testing.T) {
-		expectedRules := []string{"select-star", "n1-queries", "sql-injection"}
+	t.Run("all four default rules are present", func(t *testing.T) {
+		expectedRules := []string{"select-star", "n1-queries", "sql-injection", "tx-leak"}
 		for _, rule := range expectedRules {
 			if _, ok := defaults.Rules[rule]; !ok {
 				t.Errorf("rule %q should be present in defaults", rule)
 			}
 		}
-		if len(defaults.Rules) != 3 {
-			t.Errorf("expected 3 default rules, got %d", len(defaults.Rules))
+		if len(defaults.Rules) != 4 {
+			t.Errorf("expected 4 default rules, got %d", len(defaults.Rules))
 		}
 	})
 }
@@ -147,8 +147,8 @@ func TestRuleSeverityCanAddNewRules(t *testing.T) {
 	if defaults.Rules["custom-rule"] != "info" {
 		t.Error("should be able to add custom rules")
 	}
-	if len(defaults.Rules) != 4 {
-		t.Errorf("expected 4 rules after adding custom, got %d", len(defaults.Rules))
+	if len(defaults.Rules) != 5 {
+		t.Errorf("expected 5 rules after adding custom, got %d", len(defaults.Rules))
 	}
 }
 

@@ -516,8 +516,8 @@ rules:
 		if cfg.Rules == nil {
 			t.Fatal("Rules should not be nil")
 		}
-		if len(cfg.Rules) != 3 {
-			t.Errorf("Rules should have 3 entries, got %d", len(cfg.Rules))
+		if len(cfg.Rules) != 4 {
+			t.Errorf("Rules should have 4 entries, got %d", len(cfg.Rules))
 		}
 	})
 }

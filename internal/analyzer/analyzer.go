@@ -140,6 +140,9 @@ func (ctx *analysisContext) handleFileNode(node *ast.File) {
 	if ctx.cfg.SQLInjectionDetectionEnabled {
 		AnalyzeSQLInjection(ctx.pass, node)
 	}
+	if ctx.cfg.TxLeakDetectionEnabled {
+		AnalyzeTxLeaks(ctx.pass, node)
+	}
 }
 
 // handleCallExpr processes function/method call expressions

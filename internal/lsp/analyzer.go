@@ -31,8 +31,9 @@ type Analyzer struct {
 	allowedPatterns []*regexp.Regexp
 
 	// Feature flags for additional analyzers
-	n1Enabled   bool
-	sqliEnabled bool
+	n1Enabled     bool
+	sqliEnabled   bool
+	txLeakEnabled bool
 }
 
 // AnalyzerConfig contains configuration options for the analyzer.
@@ -71,9 +72,10 @@ func NewAnalyzerWithConfig(cfg config.UnqueryvetSettings) *Analyzer {
 		}
 	}
 
-	// Enable N+1 and SQL injection detection based on Rules configuration
+	// Enable N+1, SQL injection, and tx leak detection based on Rules configuration
 	n1Enabled := isRuleEnabled(cfg.Rules, "n1-queries")
 	sqliEnabled := isRuleEnabled(cfg.Rules, "sql-injection")
+	txLeakEnabled := isRuleEnabled(cfg.Rules, "tx-leak")
 
 	return &Analyzer{
 		selectStarPattern:      regexp.MustCompile(`(?i)SELECT\s+\*\s+FROM`),
@@ -82,6 +84,7 @@ func NewAnalyzerWithConfig(cfg config.UnqueryvetSettings) *Analyzer {
 		allowedPatterns:        allowedPatterns,
 		n1Enabled:              n1Enabled,
 		sqliEnabled:            sqliEnabled,
+		txLeakEnabled:          txLeakEnabled,
 	}
 }
 
@@ -151,8 +154,8 @@ func (a *Analyzer) Analyze(doc *Document) []protocol.Diagnostic {
 		diagnostics = append(diagnostics, diag)
 	}
 
-	// 2. AST-based detection (N+1 and SQLI)
-	if a.n1Enabled || a.sqliEnabled {
+	// 2. AST-based detection (N+1, SQLI, and tx leak)
+	if a.n1Enabled || a.sqliEnabled || a.txLeakEnabled {
 		astDiags := a.analyzeAST(doc.Content)
 		diagnostics = append(diagnostics, astDiags...)
 	}
@@ -233,6 +236,36 @@ func (a *Analyzer) analyzeAST(content string) []protocol.Diagnostic {
 		}
 	}
 
+	// Transaction leak detection
+	if a.txLeakEnabled {
+		txLeakViolations := analyzer.DetectTxLeaksInAST(fset, file)
+		for _, v := range txLeakViolations {
+			pos := fset.Position(v.Pos)
+			endPos := fset.Position(v.End)
+
+			diag := protocol.Diagnostic{
+				Range: protocol.Range{
+					Start: protocol.Position{
+						Line:      pos.Line - 1,
+						Character: pos.Column - 1,
+					},
+					End: protocol.Position{
+						Line:      endPos.Line - 1,
+						Character: endPos.Column - 1,
+					},
+				},
+				Severity: txLeakSeverityToLSP(v.Severity),
+				Code:     "tx_leak",
+				Source:   "unqueryvet",
+				Message:  v.Message,
+				CodeDescription: &protocol.CodeDescription{
+					Href: "https://github.com/MirrexOne/unqueryvet#transaction-leak-detection",
+				},
+			}
+			diagnostics = append(diagnostics, diag)
+		}
+	}
+
 	return diagnostics
 }
 
@@ -263,6 +296,20 @@ func sqliSeverityToLSP(severity analyzer.SQLISeverity) protocol.DiagnosticSeveri
 		return protocol.DiagnosticSeverityWarning
 	case analyzer.SQLISeverityLow:
 		return protocol.DiagnosticSeverityInformation
+	default:
+		return protocol.DiagnosticSeverityWarning
+	}
+}
+
+// txLeakSeverityToLSP converts transaction leak severity to LSP diagnostic severity.
+func txLeakSeverityToLSP(severity analyzer.TxLeakSeverity) protocol.DiagnosticSeverity {
+	switch severity {
+	case analyzer.TxLeakSeverityCritical:
+		return protocol.DiagnosticSeverityError
+	case analyzer.TxLeakSeverityHigh:
+		return protocol.DiagnosticSeverityError
+	case analyzer.TxLeakSeverityMedium:
+		return protocol.DiagnosticSeverityWarning
 	default:
 		return protocol.DiagnosticSeverityWarning
 	}

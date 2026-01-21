@@ -13,7 +13,7 @@
 [![Get from Marketplace](https://img.shields.io/badge/JetBrains-Get%20Plugin-000000?style=for-the-badge&logo=jetbrains)](https://plugins.jetbrains.com/plugin/29733-unqueryvet)
 [![Get from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install%20Extension-007ACC?style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=mirrexdev.unqueryvet)
 
-**unqueryvet** is a comprehensive Go static analysis tool (linter) for SQL queries. It detects `SELECT *` usage, N+1 query problems, SQL injection vulnerabilities, and provides suggestions for query optimization.
+**unqueryvet** is a comprehensive Go linter for SQL queries. It detects `SELECT *` usage, N+1 query problems, SQL injection vulnerabilities, and provides suggestions for query optimization.
 
 ## Key Features
 
