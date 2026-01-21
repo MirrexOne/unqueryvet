@@ -4,6 +4,15 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/MirrexOne/unqueryvet.svg)](https://pkg.go.dev/github.com/MirrexOne/unqueryvet)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+[![JetBrains Plugins](https://img.shields.io/jetbrains/plugin/v/29733-unqueryvet.svg)](https://plugins.jetbrains.com/plugin/29733-unqueryvet)
+[![JetBrains Plugins Downloads](https://img.shields.io/jetbrains/plugin/d/29733-unqueryvet.svg)](https://plugins.jetbrains.com/plugin/29733-unqueryvet)
+
+[![VS Code Marketplace](https://vsmarketplacebadges.dev/version-short/mirrexdev.unqueryvet.svg)](https://marketplace.visualstudio.com/items?itemName=mirrexdev.unqueryvet)
+[![VS Code Installs](https://vsmarketplacebadges.dev/installs-short/mirrexdev.unqueryvet.svg)](https://marketplace.visualstudio.com/items?itemName=mirrexdev.unqueryvet)
+
+[![Get from Marketplace](https://img.shields.io/badge/JetBrains-Get%20Plugin-000000?style=for-the-badge&logo=jetbrains)](https://plugins.jetbrains.com/plugin/29733-unqueryvet)
+[![Get from VS Code Marketplace](https://img.shields.io/badge/VS%20Code-Install%20Extension-007ACC?style=for-the-badge&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=mirrexdev.unqueryvet)
+
 **unqueryvet** is a comprehensive Go static analysis tool (linter) for SQL queries. It detects `SELECT *` usage, N+1 query problems, SQL injection vulnerabilities, and provides suggestions for query optimization.
 
 ## Key Features
