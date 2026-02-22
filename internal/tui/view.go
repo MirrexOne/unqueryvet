@@ -135,7 +135,7 @@ func RenderBatchInfo(totalIssues, appliedCount, skippedCount int, undoAvailable 
 
 	remaining := totalIssues - appliedCount - skippedCount
 
-	b.WriteString(fmt.Sprintf("Total: %d | ", totalIssues))
+	fmt.Fprintf(&b, "Total: %d | ", totalIssues)
 	b.WriteString(successStyle.Render(fmt.Sprintf("Applied: %d", appliedCount)))
 	b.WriteString(" | ")
 	b.WriteString(skippedStyle.Render(fmt.Sprintf("Skipped: %d", skippedCount)))
@@ -158,7 +158,7 @@ func RenderIssueTypeStats(typeCounts map[string]int) string {
 	b.WriteString("\n")
 
 	for issueType, count := range typeCounts {
-		b.WriteString(fmt.Sprintf("  • %s: %d\n", issueType, count))
+		fmt.Fprintf(&b, "  • %s: %d\n", issueType, count)
 	}
 
 	return b.String()
@@ -262,7 +262,7 @@ func RenderHelpFull() string {
 		b.WriteString(issueHeaderStyle.Render(section.title))
 		b.WriteString("\n")
 		for _, k := range section.keys {
-			b.WriteString(fmt.Sprintf("  %s\t%s\n", helpStyle.Render(k.key), k.desc))
+			fmt.Fprintf(&b, "  %s\t%s\n", helpStyle.Render(k.key), k.desc)
 		}
 		b.WriteString("\n")
 	}

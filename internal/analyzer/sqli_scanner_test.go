@@ -214,6 +214,87 @@ func getActiveUsers(db *sql.DB) {
 	}
 }
 
+func TestSQLPotentiallyTaintedVariableFalsePositive(t *testing.T) {
+	src := `
+package main
+
+import (
+	"context"
+	"database/sql"
+)
+
+const sqliteInitStmt = "CREATE TABLE test (id INTEGER PRIMARY KEY)"
+
+func initContext(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, sqliteInitStmt)
+	return err
+}
+`
+
+	scanner := NewSQLInjectionScanner()
+	violations := parseSQLI(t, src, scanner)
+
+	// Убеждаемся, что при использовании константы линтер не находит уязвимостей (ни одной High / Critical)
+	for _, v := range violations {
+		if v.Severity == SQLISeverityHigh || v.Severity == SQLISeverityCritical {
+			t.Errorf("Unexpected violation for constant query: %s", v.Message)
+		}
+	}
+}
+
+func TestSQLQueryParametersFalsePositive(t *testing.T) {
+	src := `
+package main
+
+import (
+	"context"
+	"database/sql"
+)
+
+func insertUser(ctx context.Context, db *sql.DB, name string, email string) error {
+	// The query is safe (parameterized), the arguments (name, email) are user input but passed safely as parameters.
+	_, err := db.ExecContext(ctx, "INSERT INTO users (name, email) VALUES (?, ?)", name, email)
+	return err
+}
+`
+
+	scanner := NewSQLInjectionScanner()
+	violations := parseSQLI(t, src, scanner)
+
+	for _, v := range violations {
+		if v.Severity == SQLISeverityHigh || v.Severity == SQLISeverityCritical {
+			t.Errorf("Unexpected violation for safe query parameters: %s", v.Message)
+		}
+	}
+}
+
+func TestSQLStmtMethodFalsePositive(t *testing.T) {
+	src := `
+package main
+
+import (
+	"context"
+	"database/sql"
+)
+
+func insertUserStmt(ctx context.Context, stmt *sql.Stmt, name string, email string) error {
+	// stmt.ExecContext does not take a query string as argument, only parameters.
+	// So 'name' and 'email' should not be flagged as SQL injections.
+	_, err := stmt.ExecContext(ctx, name, email)
+	return err
+}
+`
+
+	scanner := NewSQLInjectionScanner()
+	violations := parseSQLI(t, src, scanner)
+
+	for _, v := range violations {
+		if v.Severity == SQLISeverityHigh || v.Severity == SQLISeverityCritical {
+			t.Errorf("Unexpected violation for stmt method: %s", v.Message)
+		}
+	}
+}
+
 func parseSQLI(t *testing.T, src string, scanner *SQLInjectionScanner) []SQLInjectionViolation {
 	t.Helper()
 
