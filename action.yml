@@ -46,11 +46,13 @@ runs:
     - name: Install unqueryvet
       shell: bash
       run: |
-        if [ "${{ inputs.version }}" = "latest" ]; then
+        if [ "${INPUTS_VERSION}" = "latest" ]; then
           go install github.com/MirrexOne/unqueryvet/cmd/unqueryvet@latest
         else
-          go install github.com/MirrexOne/unqueryvet/cmd/unqueryvet@${{ inputs.version }}
+          go install github.com/MirrexOne/unqueryvet/cmd/unqueryvet@${INPUTS_VERSION}
         fi
+      env:
+        INPUTS_VERSION: ${{ inputs.version }}
 
     - name: Run unqueryvet
       id: run
@@ -59,13 +61,13 @@ runs:
       run: |
         set +e
 
-        ARGS="${{ inputs.args }}"
+        ARGS="${INPUTS_ARGS}"
 
-        if [ "${{ inputs.check-n1 }}" = "true" ]; then
+        if [ "${INPUTS_CHECK_N1}" = "true" ]; then
           ARGS="-n1 $ARGS"
         fi
 
-        if [ "${{ inputs.check-sqli }}" = "true" ]; then
+        if [ "${INPUTS_CHECK_SQLI}" = "true" ]; then
           ARGS="-sqli $ARGS"
         fi
 
@@ -80,7 +82,7 @@ runs:
         echo "issues=$ISSUES" >> $GITHUB_OUTPUT
         echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
 
-        if [ "${{ inputs.fail-on-issues }}" = "true" ] && [ $EXIT_CODE -ne 0 ]; then
+        if [ "${INPUTS_FAIL_ON_ISSUES}" = "true" ] && [ $EXIT_CODE -ne 0 ]; then
           echo "::error::Unqueryvet found $ISSUES issues"
           exit 1
         fi
@@ -90,3 +92,8 @@ runs:
         else
           echo "::warning::Found $ISSUES SELECT * issues"
         fi
+      env:
+        INPUTS_ARGS: ${{ inputs.args }}
+        INPUTS_CHECK_N1: ${{ inputs.check-n1 }}
+        INPUTS_CHECK_SQLI: ${{ inputs.check-sqli }}
+        INPUTS_FAIL_ON_ISSUES: ${{ inputs.fail-on-issues }}

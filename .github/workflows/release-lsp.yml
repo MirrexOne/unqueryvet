@@ -21,28 +21,35 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.21'
-          cache: true
+          cache: false
 
       - name: Get version
         id: version
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${GITHUB_EVENT_RELEASE_TAG_NAME}"
           else
-            VERSION="${{ github.event.inputs.version }}"
+            VERSION="${GITHUB_EVENT_INPUTS_VERSION}"
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION"
+        env:
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
+          GITHUB_EVENT_INPUTS_VERSION: ${{ github.event.inputs.version }}
 
       - name: Build binaries for all platforms
         run: |
           chmod +x scripts/build-lsp.sh
-          ./scripts/build-lsp.sh ${{ steps.version.outputs.version }} dist
+          ./scripts/build-lsp.sh ${STEPS_VERSION_OUTPUTS_VERSION} dist
+        env:
+          STEPS_VERSION_OUTPUTS_VERSION: ${{ steps.version.outputs.version }}
 
       - name: Generate checksums
         run: |
