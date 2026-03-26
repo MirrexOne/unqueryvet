@@ -7,8 +7,8 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/expr-lang/expr v1.17.7
+	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/tools v0.36.0
-	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
