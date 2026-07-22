@@ -1,6 +1,5 @@
 # unqueryvet
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/MirrexOne/unqueryvet)](https://goreportcard.com/report/github.com/MirrexOne/unqueryvet)
 [![Go Reference](https://pkg.go.dev/badge/github.com/MirrexOne/unqueryvet.svg)](https://pkg.go.dev/github.com/MirrexOne/unqueryvet)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
