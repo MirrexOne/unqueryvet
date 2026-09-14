@@ -100,6 +100,12 @@ func NewFormatStringAnalyzer(pass *analysis.Pass, cfg *config.UnqueryvetSettings
 // AnalyzeFormatCall analyzes a function call for format string patterns with SELECT *.
 // Returns true if SELECT * was detected in the format string.
 func (fsa *FormatStringAnalyzer) AnalyzeFormatCall(call *ast.CallExpr) bool {
+	return fsa.analyzeFormatCall(call, func(query string) bool {
+		return isSelectStarQuery(query, fsa.cfg)
+	})
+}
+
+func (fsa *FormatStringAnalyzer) analyzeFormatCall(call *ast.CallExpr, checkQuery func(string) bool) bool {
 	// Get the function name
 	funcName := fsa.getFunctionName(call)
 	if funcName == "" {
@@ -120,7 +126,7 @@ func (fsa *FormatStringAnalyzer) AnalyzeFormatCall(call *ast.CallExpr) bool {
 
 	// Check if the format string contains SELECT *
 	normalized := normalizeSQLQuery("\"" + formatStr + "\"")
-	return isSelectStarQuery(normalized, fsa.cfg)
+	return checkQuery(normalized)
 }
 
 // getFunctionName extracts the function name from a call expression.
