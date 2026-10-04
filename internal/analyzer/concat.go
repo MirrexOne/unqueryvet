@@ -29,6 +29,12 @@ func NewStringConcatAnalyzer(pass *analysis.Pass, cfg *config.UnqueryvetSettings
 // AnalyzeBinaryExpr analyzes a binary expression for string concatenation with SELECT *.
 // Returns true if SELECT * was detected in the concatenated string.
 func (sca *StringConcatAnalyzer) AnalyzeBinaryExpr(expr *ast.BinaryExpr) bool {
+	return sca.analyzeBinaryExpr(expr, func(query string) bool {
+		return isSelectStarQuery(query, sca.cfg)
+	})
+}
+
+func (sca *StringConcatAnalyzer) analyzeBinaryExpr(expr *ast.BinaryExpr, checkQuery func(string) bool) bool {
 	// Only analyze string concatenation (+ operator)
 	if expr.Op != token.ADD {
 		return false
@@ -48,7 +54,7 @@ func (sca *StringConcatAnalyzer) AnalyzeBinaryExpr(expr *ast.BinaryExpr) bool {
 
 	// Normalize and check for SELECT *
 	normalized := normalizeSQLQuery("\"" + combined + "\"")
-	return isSelectStarQuery(normalized, sca.cfg)
+	return checkQuery(normalized)
 }
 
 // extractStringParts recursively extracts all string literal parts from a concatenation chain.

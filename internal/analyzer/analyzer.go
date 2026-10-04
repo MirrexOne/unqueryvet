@@ -53,6 +53,7 @@ type analysisContext struct {
 	cfg             *config.UnqueryvetSettings
 	filter          *FilterContext
 	builderRegistry *sqlbuilders.Registry
+	checkQuery      func(string) bool
 }
 
 // RunWithConfig performs analysis with provided configuration
@@ -87,11 +88,15 @@ func RunWithConfig(pass *analysis.Pass, cfg *config.UnqueryvetSettings) (any, er
 		builderRegistry = sqlbuilders.NewRegistry(&cfg.SQLBuilders)
 	}
 
+	patterns := make(allowedPatternCache)
 	ctx := &analysisContext{
 		pass:            pass,
 		cfg:             cfg,
 		filter:          filter,
 		builderRegistry: builderRegistry,
+		checkQuery: func(query string) bool {
+			return isSelectStarQueryWithCache(query, cfg, patterns)
+		},
 	}
 
 	// Define AST node types we're interested in
@@ -116,10 +121,10 @@ func (ctx *analysisContext) handleNode(n ast.Node) {
 		ctx.handleFileNode(node)
 	case *ast.AssignStmt:
 		// Check assignment statements for standalone SQL literals
-		checkAssignStmt(ctx.pass, node, ctx.cfg)
+		checkAssignStmt(ctx.pass, node, ctx.checkQuery)
 	case *ast.GenDecl:
 		// Check constant and variable declarations
-		checkGenDecl(ctx.pass, node, ctx.cfg)
+		checkGenDecl(ctx.pass, node, ctx.checkQuery)
 	case *ast.CallExpr:
 		ctx.handleCallExpr(node)
 		// Analyze function calls for SQL with SELECT * usage
@@ -151,7 +156,7 @@ func (ctx *analysisContext) handleCallExpr(node *ast.CallExpr) {
 		return
 	}
 
-	if ctx.cfg.CheckFormatStrings && CheckFormatFunction(ctx.pass, node, ctx.cfg) {
+	if ctx.cfg.CheckFormatStrings && NewFormatStringAnalyzer(ctx.pass, ctx.cfg).analyzeFormatCall(node, ctx.checkQuery) {
 		ctx.pass.Report(analysis.Diagnostic{
 			Pos:     node.Pos(),
 			Message: getDetailedWarningMessage("format_string"),
@@ -173,12 +178,12 @@ func (ctx *analysisContext) handleCallExpr(node *ast.CallExpr) {
 		}
 	}
 
-	checkCallExpr(ctx.pass, node, ctx.cfg)
+	checkCallExpr(ctx.pass, node, ctx.checkQuery)
 }
 
 // handleBinaryExpr processes binary expressions (string concatenation)
 func (ctx *analysisContext) handleBinaryExpr(node *ast.BinaryExpr) {
-	if ctx.cfg.CheckStringConcat && CheckConcatenation(ctx.pass, node, ctx.cfg) {
+	if ctx.cfg.CheckStringConcat && NewStringConcatAnalyzer(ctx.pass, ctx.cfg).analyzeBinaryExpr(node, ctx.checkQuery) {
 		ctx.pass.Report(analysis.Diagnostic{
 			Pos:     node.Pos(),
 			Message: getDetailedWarningMessage("concat"),
@@ -187,13 +192,13 @@ func (ctx *analysisContext) handleBinaryExpr(node *ast.BinaryExpr) {
 }
 
 // checkAssignStmt checks assignment statements for standalone SQL literals
-func checkAssignStmt(pass *analysis.Pass, stmt *ast.AssignStmt, cfg *config.UnqueryvetSettings) {
+func checkAssignStmt(pass *analysis.Pass, stmt *ast.AssignStmt, checkQuery func(string) bool) {
 	// Check right-hand side expressions for string literals with SELECT *
 	for _, expr := range stmt.Rhs {
 		// Only check direct string literals, not function calls
 		if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 			content := normalizeSQLQuery(lit.Value)
-			if isSelectStarQuery(content, cfg) {
+			if checkQuery(content) {
 				pass.Report(analysis.Diagnostic{
 					Pos:     lit.Pos(),
 					Message: getWarningMessage(),
@@ -204,7 +209,7 @@ func checkAssignStmt(pass *analysis.Pass, stmt *ast.AssignStmt, cfg *config.Unqu
 }
 
 // checkGenDecl checks general declarations (const, var) for SELECT * in SQL queries
-func checkGenDecl(pass *analysis.Pass, decl *ast.GenDecl, cfg *config.UnqueryvetSettings) {
+func checkGenDecl(pass *analysis.Pass, decl *ast.GenDecl, checkQuery func(string) bool) {
 	// Only check const and var declarations
 	if decl.Tok != token.CONST && decl.Tok != token.VAR {
 		return
@@ -223,7 +228,7 @@ func checkGenDecl(pass *analysis.Pass, decl *ast.GenDecl, cfg *config.Unqueryvet
 			// Only check direct string literals
 			if lit, ok := value.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 				content := normalizeSQLQuery(lit.Value)
-				if isSelectStarQuery(content, cfg) {
+				if checkQuery(content) {
 					pass.Report(analysis.Diagnostic{
 						Pos:     lit.Pos(),
 						Message: getWarningMessage(),
@@ -237,12 +242,12 @@ func checkGenDecl(pass *analysis.Pass, decl *ast.GenDecl, cfg *config.Unqueryvet
 // checkCallExpr analyzes function calls for SQL with SELECT * usage
 // Note: SQL builder checking with type verification is done by Registry.Check() in handleCallExpr.
 // This function only checks raw SQL strings in function arguments.
-func checkCallExpr(pass *analysis.Pass, call *ast.CallExpr, cfg *config.UnqueryvetSettings) {
+func checkCallExpr(pass *analysis.Pass, call *ast.CallExpr, checkQuery func(string) bool) {
 	// Check function call arguments for strings with SELECT *
 	for _, arg := range call.Args {
 		if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING {
 			content := normalizeSQLQuery(lit.Value)
-			if isSelectStarQuery(content, cfg) {
+			if checkQuery(content) {
 				pass.Report(analysis.Diagnostic{
 					Pos:     lit.Pos(),
 					Message: getWarningMessage(),
@@ -319,9 +324,13 @@ func IsSelectStarQuery(query string, cfg *config.UnqueryvetSettings) bool {
 }
 
 func isSelectStarQuery(query string, cfg *config.UnqueryvetSettings) bool {
+	return isSelectStarQueryWithCache(query, cfg, nil)
+}
+
+func isSelectStarQueryWithCache(query string, cfg *config.UnqueryvetSettings, patterns allowedPatternCache) bool {
 	// Check allowed patterns first - if query matches an allowed pattern, ignore it
 	for _, pattern := range cfg.AllowedPatterns {
-		if matched, _ := regexp.MatchString(pattern, query); matched {
+		if patterns.matchString(pattern, query) {
 			return false
 		}
 	}
